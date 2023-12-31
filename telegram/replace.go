@@ -17,7 +17,7 @@ var linkMessage = "[🔗](%s) Da %s."
 var regexFlags = "(?i)(?m)"
 var replacers = []Replacer{
 	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)(\S+)?`),
+		Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
 		Format: "https://y.outube.duckdns.org/%s",
 	},
 	{
