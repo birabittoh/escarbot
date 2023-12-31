@@ -12,7 +12,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("No .env file provided.")
+		log.Println("No .env file provided.")
 	}
 
 	botToken := os.Getenv("BOT_TOKEN")
@@ -37,8 +37,8 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Println("PORT not set in .env! Defaulting to 1111.")
-		port = "1111"
+		log.Println("PORT not set in .env! Defaulting to 3000.")
+		port = "3000"
 	}
 
 	bot := telegram.NewBot(botToken, channelId, groupId, adminId)

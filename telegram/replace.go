@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
 )
 
 type Replacer struct {
@@ -92,6 +92,7 @@ func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	for _, link := range links {
 		text := fmt.Sprintf(linkMessage, link, user)
 		msg := tgbotapi.NewMessage(message.Chat.ID, text)
+		msg.MessageThreadID = message.MessageThreadID
 		msg.ParseMode = parseMode
 		msg.ReplyMarkup = inlineKeyboardFeedback
 		bot.Send(msg)

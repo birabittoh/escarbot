@@ -3,7 +3,7 @@ package telegram
 import (
 	"log"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
 )
 
 func channelPostHandler(escarbot *EscarBot, message *tgbotapi.Message) {
@@ -14,7 +14,6 @@ func channelPostHandler(escarbot *EscarBot, message *tgbotapi.Message) {
 	}
 
 	msg := tgbotapi.NewForward(escarbot.GroupID, chatId, message.MessageID)
-	msg.ReplyToMessageID = message.MessageID
 	_, err := escarbot.Bot.Send(msg)
 	if err != nil {
 		log.Println("Error forwarding message to group:", err)

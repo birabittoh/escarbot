@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+
+FROM golang:alpine AS builder
+
+WORKDIR /build
+
+# Download Go modules
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Transfer source code
+COPY telegram ./telegram
+COPY webui ./webui
+COPY index.html ./
+COPY *.go ./
+
+# Build
+RUN CGO_ENABLED=0 go build -trimpath -o /dist/app
+COPY index.html /dist
+
+# Test
+FROM build-stage AS run-test-stage
+RUN go test -v ./...
+
+FROM scratch AS build-release-stage
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /dist /app
+
+WORKDIR /app
+
+ENTRYPOINT ["/app/app"]

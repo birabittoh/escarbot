@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"log"
 	"net/http"
-	"path"
 	"strconv"
 	"text/template"
 
@@ -18,7 +17,7 @@ type WebUI struct {
 	port string
 }
 
-var indexTemplate = template.Must(template.ParseFiles(path.Join("webui", "index.html")))
+var indexTemplate = template.Must(template.ParseFiles("index.html"))
 
 const toggleFormName = "toggle"
 

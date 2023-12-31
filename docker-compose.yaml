@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    image: ghcr.io/birabittoh/escarbot:main
+    container_name: escarbot
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    environment:
+      - BOT_TOKEN
+      - CHANNEL_ID
+      - GROUP_ID
+      - ADMIN_ID
+      #- PORT
+    #volumes:
+      #- /etc/localtime:/etc/localtime:ro
