@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Telegram Control Panel</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/milligram@1.4.1/dist/milligram.min.css">
+    <style>
+        label {
+            display: inline-block;
+        }
+        body {
+            background-color: #1f1f1f;
+            color: #fff;
+        }
+        button:hover {
+            background-color: #8842b3;
+        }
+        input, textarea {
+            color: #fff;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <h1>EscarBot</h1>
+
+    <form action="/setLinks" id="linkForm">
+        <label>
+            <input type="checkbox" id="linkToggle" name="toggle"{{ if .LinkDetection }} checked{{ end }}>
+            Link detection in group messages
+        </label>
+    </form>
+
+    <form action="/setChannelForward" id="channelForwardForm">
+        <label>
+            <input type="checkbox" id="channelForwardToggle" name="toggle"{{ if .ChannelForward }} checked{{ end }}>
+            Message forwarding (channel)
+        </label>
+    </form>
+
+    <form action="/setAdminForward" id="adminForwardForm">
+        <label>
+            <input type="checkbox" id="adminForwardToggle" name="toggle"{{ if .AdminForward }} checked{{ end }}>
+            Message forwarding (admin)
+        </label>
+    </form>
+
+    <form action="/setChannel" id="channelForm">
+        <label>
+            Channel ID:
+            <input type="text" id="channelId" name="id" value="{{ .ChannelID }}" required>
+        </label>
+        <button type="submit">Change</button>
+    </form>
+
+    <form action="/setGroup" id="groupForm">
+        <label>
+            Group ID:
+            <input type="text" id="groupId" name="id" value="{{ .GroupID }}" required>
+        </label>
+        <button type="submit">Change</button>
+    </form>
+
+    <form action="/setAdmin" id="adminForm">
+        <label>
+            Admin ID:
+            <input type="text" id="adminId" name="id" value="{{ .AdminID }}" required>
+        </label>
+        <button type="submit">Change</button>
+    </form>
+
+    <form id="messageForm">
+        <label for="customMessage">Custom Message:</label>
+        <textarea id="customMessage" name="customMessage" rows="4" required></textarea>
+        <label>
+            Recipient:
+            <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
+        </label>
+        <button id="customMessageButton">Send</button>
+    </form>
+
+    <script>
+        const sendMessageUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/sendMessage"
+        const messageParams = new URLSearchParams({
+            "text": "",
+            "chat_id": "",
+            "reply_to_message_id": "",
+            "parse_mode": "markdown",
+            "disable_web_page_preview": "false",
+            "disable_notification": "false",
+        })
+        const customMessageBox = document.getElementById("customMessage");
+        function handleToggle(toggleId, formId) {
+            document.getElementById(toggleId).addEventListener('change', () => {
+                document.getElementById(formId).submit();
+            });
+        }
+
+        handleToggle('linkToggle', 'linkForm');
+        handleToggle('channelForwardToggle', 'channelForwardForm');
+        handleToggle('adminForwardToggle', 'adminForwardForm');
+
+        document.getElementById("customMessageButton").addEventListener("click", (event) => {
+            event.preventDefault()
+            const value = customMessageBox.value;
+            const recipient = document.getElementById("recipientId").value;
+
+            messageParams.set("text", value);
+            messageParams.set("chat_id", recipient);
+            
+            const request_url = sendMessageUrl + "?" + messageParams;
+            console.log(request_url);
+            fetch(request_url).then((response) => {
+                response.json().then((data) => {
+                    console.log(data);
+                    if (data.ok) customMessageBox.value = "";
+                    else alert(data.description);
+                })
+            })
+        })
+    </script>
+</body>
+</html>
