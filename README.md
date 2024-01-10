@@ -1,5 +1,5 @@
 # EscarBot
-Telegram bot for EarthBound Café!
+Telegram bot for [EarthBound Café](https://linktr.ee/earthboundcafe)!
 
 ## Instructions
 
