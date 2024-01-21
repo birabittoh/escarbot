@@ -29,7 +29,7 @@ var replacers = []Replacer{
 		Format: "https://fixupx.com/%s/status/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:https?:\/\/)?(?:www\.)?instagram\.com\/((?:reel)|p)\/([A-Za-z0-9_]{11})[\/\?\w=&]*`),
+		Regex:  regexp.MustCompile(regexFlags + `(?:https?:\/\/)?(?:www\.)?instagram\.com\/(reel|p)\/([A-Za-z0-9_-]{11})[\/\?\w=&]*`),
 		Format: "https://ddinstagram.com/%s/%s",
 	},
 	{
