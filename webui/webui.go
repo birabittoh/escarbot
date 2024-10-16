@@ -19,8 +19,6 @@ type WebUI struct {
 
 var indexTemplate = template.Must(template.ParseFiles("index.html"))
 
-const toggleFormName = "toggle"
-
 func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		buf := &bytes.Buffer{}
@@ -33,14 +31,14 @@ func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
-func toggleBotProperty(w http.ResponseWriter, r *http.Request, bot *telegram.EscarBot) bool {
+func toggleBotProperty(w http.ResponseWriter, r *http.Request) bool {
 	r.ParseForm()
 	res := r.Form.Get("toggle")
 	http.Redirect(w, r, "/", http.StatusFound)
 	return res == "on"
 }
 
-func getChatID(w http.ResponseWriter, r *http.Request, bot *telegram.EscarBot) (int64, error) {
+func getChatID(w http.ResponseWriter, r *http.Request) (int64, error) {
 	r.ParseForm()
 	res := r.Form.Get("id")
 	http.Redirect(w, r, "/", http.StatusFound)
@@ -49,25 +47,25 @@ func getChatID(w http.ResponseWriter, r *http.Request, bot *telegram.EscarBot) (
 
 func linksHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bot.LinkDetection = toggleBotProperty(w, r, bot)
+		bot.LinkDetection = toggleBotProperty(w, r)
 	}
 }
 
 func channelForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bot.ChannelForward = toggleBotProperty(w, r, bot)
+		bot.ChannelForward = toggleBotProperty(w, r)
 	}
 }
 
 func adminForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bot.AdminForward = toggleBotProperty(w, r, bot)
+		bot.AdminForward = toggleBotProperty(w, r)
 	}
 }
 
 func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r, bot)
+		res, err := getChatID(w, r)
 		if err != nil {
 			log.Println(err)
 			return
@@ -78,7 +76,7 @@ func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func groupHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r, bot)
+		res, err := getChatID(w, r)
 		if err != nil {
 			log.Println(err)
 			return
@@ -89,7 +87,7 @@ func groupHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func adminHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r, bot)
+		res, err := getChatID(w, r)
 		if err != nil {
 			log.Println(err)
 			return

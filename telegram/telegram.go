@@ -43,9 +43,6 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		log.Fatal("Error while converting ADMIN_ID to int64:", err)
 	}
 
-	emptyKeyboard = tgbotapi.NewInlineKeyboardMarkup()
-	emptyKeyboard.InlineKeyboard = [][]tgbotapi.InlineKeyboardButton{}
-
 	return &EscarBot{
 		Bot:            bot,
 		Power:          true,
@@ -79,10 +76,6 @@ func BotPoll(escarbot *EscarBot) {
 			if escarbot.ChannelForward {
 				channelPostHandler(escarbot, update.ChannelPost)
 			}
-		}
-		query := update.CallbackQuery
-		if query != nil { // If we got a callback query
-			callbackQueryHandler(bot, query)
 		}
 	}
 }

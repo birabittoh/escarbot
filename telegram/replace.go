@@ -97,7 +97,6 @@ func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		msg := tgbotapi.NewMessage(message.Chat.ID, text)
 		msg.MessageThreadID = message.MessageThreadID
 		msg.ParseMode = parseMode
-		msg.ReplyMarkup = inlineKeyboardFeedback
 		bot.Send(msg)
 	}
 
