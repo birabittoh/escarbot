@@ -70,7 +70,13 @@ func parseText(message string) []string {
 }
 
 func getUserMention(user tgbotapi.User) string {
-	return fmt.Sprintf("[@%s](tg://user?id=%d)", user.UserName, user.ID)
+	var name string
+	if user.UserName == "" {
+		name = user.FirstName + user.LastName
+	} else {
+		name = "@" + user.UserName
+	}
+	return fmt.Sprintf("[%s](tg://user?id=%d)", name, user.ID)
 }
 
 func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
