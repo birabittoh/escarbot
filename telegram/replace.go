@@ -45,19 +45,36 @@ var replacers = []Replacer{
 	},
 }
 
-func parseText(text string, entities []tgbotapi.MessageEntity) []string {
-	var rawLinks string
-	for _, e := range entities {
-		if e.Type == "text_link" {
-			rawLinks += e.URL + "\n"
+func isInSpoiler(entities []tgbotapi.MessageEntity, offset, length int) bool {
+	for _, s := range entities {
+		if s.Type != "spoiler" {
+			continue
 		}
 
-		if e.Type == "url" {
+		if offset < s.Offset+s.Length && offset+length > s.Offset {
+			return true
+		}
+	}
+	return false
+}
+
+func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) {
+	var rawLinks string
+
+	for _, e := range entities {
+		if e.Type == "text_link" {
+			if isInSpoiler(entities, e.Offset, len(e.URL)) {
+				continue
+			}
+			rawLinks += e.URL + "\n"
+		} else if e.Type == "url" {
+			if isInSpoiler(entities, e.Offset, e.Length) {
+				continue
+			}
 			rawLinks += text[e.Offset:e.Length] + "\n"
 		}
 	}
 
-	links := []string{}
 	for _, replacer := range replacers {
 		foundMatches := replacer.Regex.FindStringSubmatch(rawLinks)
 		if len(foundMatches) == 0 {
