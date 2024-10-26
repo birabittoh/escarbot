@@ -45,12 +45,21 @@ var replacers = []Replacer{
 	},
 }
 
-func parseText(message string) []string {
+func parseText(text string, entities []tgbotapi.MessageEntity) []string {
+	var rawLinks string
+	for _, e := range entities {
+		if e.Type == "text_link" {
+			rawLinks += e.URL + "\n"
+		}
+
+		if e.Type == "url" {
+			rawLinks += text[e.Offset:e.Length] + "\n"
+		}
+	}
+
 	links := []string{}
-
 	for _, replacer := range replacers {
-		foundMatches := replacer.Regex.FindStringSubmatch(message)
-
+		foundMatches := replacer.Regex.FindStringSubmatch(rawLinks)
 		if len(foundMatches) == 0 {
 			continue
 		}
@@ -82,13 +91,13 @@ func getUserMention(user tgbotapi.User) string {
 func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	links := []string{}
 
-	if message.Text != "" {
-		textLinks := parseText(message.Text)
+	if len(message.Entities) > 0 {
+		textLinks := parseText(message.Text, message.Entities)
 		links = append(links, textLinks...)
 	}
 
-	if message.Caption != "" {
-		captionLinks := parseText(message.Caption)
+	if len(message.CaptionEntities) > 0 {
+		captionLinks := parseText(message.Caption, message.CaptionEntities)
 		links = append(links, captionLinks...)
 	}
 
