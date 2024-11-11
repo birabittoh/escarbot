@@ -71,7 +71,8 @@ func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) 
 			if isInSpoiler(entities, e.Offset, e.Length) {
 				continue
 			}
-			rawLinks += text[e.Offset:e.Length] + "\n"
+
+			rawLinks += text[e.Offset:e.Offset+e.Length] + "\n"
 		}
 	}
 
