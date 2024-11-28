@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
 )
@@ -60,6 +61,7 @@ func isInSpoiler(entities []tgbotapi.MessageEntity, offset, length int) bool {
 
 func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) {
 	var rawLinks string
+	runes := []rune(text) // Convert to runes to handle emojis
 
 	for _, e := range entities {
 		if e.Type == "text_link" {
@@ -72,7 +74,7 @@ func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) 
 				continue
 			}
 
-			rawLinks += text[e.Offset:e.Offset+e.Length] + "\n"
+			rawLinks += string(runes[e.Offset:e.Offset+e.Length]) + "\n"
 		}
 	}
 
@@ -99,7 +101,7 @@ func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) 
 func getUserMention(user tgbotapi.User) string {
 	var name string
 	if user.UserName == "" {
-		name = user.FirstName + user.LastName
+		name = strings.TrimSpace(user.FirstName + " " + user.LastName)
 	} else {
 		name = "@" + user.UserName
 	}
