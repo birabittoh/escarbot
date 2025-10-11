@@ -20,12 +20,10 @@ const (
 )
 
 var replacers = []Replacer{
-	/*
-		{
-			Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
-			Format: "https://y.outube.duckdns.org/%s",
-		},
-	*/
+	{
+		Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
+		Format: "https://y.outube.duckdns.org/%s",
+	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?twitter\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
 		Format: "https://fxtwitter.com/%s/status/%s",
