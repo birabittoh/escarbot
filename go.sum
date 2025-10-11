@@ -1,4 +1,4 @@
-github.com/BiRabittoh/telegram-bot-api/v5 v5.0.0-20231231112435-13d701ae92be h1:G80Qzl7+TSAjG7xTdG5VbaYlVvK8w5BjSf2IYmjmc7A=
-github.com/BiRabittoh/telegram-bot-api/v5 v5.0.0-20231231112435-13d701ae92be/go.mod h1:Hn75O37Cj+Z5L0QnEfXC3pQ3wyBP+h/su5+pclPna5g=
+github.com/OvyFlash/telegram-bot-api v0.0.0-20250903213241-2ddbaeebe9a5 h1:KxVUneacfcaw9rMeOWk2DnKJZYMfI4Mrc2MtdYYP85k=
+github.com/OvyFlash/telegram-bot-api v0.0.0-20250903213241-2ddbaeebe9a5/go.mod h1:2nRUdsKyWhvezqW/rBGWEQdcTQeTtnbSNd2dgx76WYA=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=

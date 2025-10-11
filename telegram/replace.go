@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 type Replacer struct {
@@ -35,8 +35,8 @@ var replacers = []Replacer{
 		Format: "https://fixupx.com/%s/status/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
-		Format: "https://kkinstagram.com/%s/%s",
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(?:reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
+		Format: "https://kkinstagram.com/p/%s",
 	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/@([\w.]+)\/(?:video)\/(\d{19,})`),

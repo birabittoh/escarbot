@@ -1,7 +1,8 @@
-module github.com/BiRabittoh/escarbot
+module github.com/birabittoh/escarbot
 
-go 1.21.5
+go 1.23
 
-require github.com/joho/godotenv v1.5.1
-
-require github.com/BiRabittoh/telegram-bot-api/v5 v5.0.0-20231231112435-13d701ae92be
+require (
+	github.com/OvyFlash/telegram-bot-api v0.0.0-20250903213241-2ddbaeebe9a5
+	github.com/joho/godotenv v1.5.1
+)

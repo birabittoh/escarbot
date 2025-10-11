@@ -4,7 +4,7 @@ import (
 	"log"
 	"strconv"
 
-	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 type EscarBot struct {

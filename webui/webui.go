@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/BiRabittoh/escarbot/telegram"
+	"github.com/birabittoh/escarbot/telegram"
 )
 
 type WebUI struct {

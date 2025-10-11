@@ -3,7 +3,7 @@ package telegram
 import (
 	"log"
 
-	tgbotapi "github.com/BiRabittoh/telegram-bot-api/v5"
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 func channelPostHandler(escarbot *EscarBot, message *tgbotapi.Message) {

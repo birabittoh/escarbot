@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/BiRabittoh/escarbot/telegram"
-	"github.com/BiRabittoh/escarbot/webui"
+	"github.com/birabittoh/escarbot/telegram"
+	"github.com/birabittoh/escarbot/webui"
 	"github.com/joho/godotenv"
 )
 
