@@ -20,29 +20,31 @@ const (
 )
 
 var replacers = []Replacer{
-	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
-		Format: "https://y.outube.duckdns.org/%s",
-	},
+	/*
+		{
+			Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
+			Format: "https://y.outube.duckdns.org/%s",
+		},
+	*/
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?twitter\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
 		Format: "https://fxtwitter.com/%s/status/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:https?:\/\/)?(?:www\.)?x\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?x\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
 		Format: "https://fixupx.com/%s/status/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:https?:\/\/)?(?:www\.)?instagram\.com\/(reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
-		Format: "https://ddinstagram.com/%s/%s",
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
+		Format: "https://kkinstagram.com/%s/%s",
 	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/@([\w.]+)\/(?:video)\/(\d{19,})`),
-		Format: "https://www.tnktok.com/@%s/video/%s",
+		Format: "https://www.vxtiktok.com/@%s/video/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `(?:https?:\/\/)?(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
-		Format: "https://vm.tnktok.com/%s/",
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
+		Format: "https://vm.vxtiktok.com/%s/",
 	},
 }
 
