@@ -44,11 +44,11 @@ var replacers = []Replacer{
 	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/@([\w.]+)\/(?:video)\/(\d{19,})`),
-		Format: "https://www.vxtiktok.com/@%s/video/%s",
+		Format: "https://www.kktiktok.com/@%s/video/%s",
 	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
-		Format: "https://vm.vxtiktok.com/%s/",
+		Format: "https://vm.kktiktok.com/%s/",
 	},
 }
 
