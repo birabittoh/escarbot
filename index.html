@@ -439,22 +439,23 @@
                 max-height: 300px;
             }
 
-            /* Compact buttons for input rows */
+            .input-with-button {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
             .input-with-button button {
-                padding: 8px 12px;
-                font-size: 0.8rem;
+                margin-top: 10px;
+            }
+
+            .input-with-clear {
+                flex-direction: column;
+                align-items: stretch;
             }
 
             .btn-clear {
-                padding: 8px 10px;
-                font-size: 0.85rem;
-                min-width: auto;
-            }
-
-            .btn-remove {
-                padding: 8px 10px;
-                font-size: 0.85rem;
-                min-width: auto;
+                margin-top: 10px;
+                width: 100%;
             }
         }
     </style>
