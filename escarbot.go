@@ -35,13 +35,18 @@ func main() {
 		log.Fatal("Please set up your ADMIN_ID in .env!")
 	}
 
+	logChannelId := os.Getenv("LOG_CHANNEL_ID")
+	if logChannelId == "" {
+		log.Fatal("Please set up your LOG_CHANNEL_ID in .env!")
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		log.Println("PORT not set in .env! Defaulting to 3000.")
 		port = "3000"
 	}
 
-	bot := telegram.NewBot(botToken, channelId, groupId, adminId)
+	bot := telegram.NewBot(botToken, channelId, groupId, adminId, logChannelId)
 	ui := webui.NewWebUI(port, bot)
 	ui.Poll()
 }

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/birabittoh/escarbot/telegram"
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
+	"github.com/birabittoh/escarbot/telegram"
 )
 
 type WebUI struct {
@@ -79,6 +79,34 @@ func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.AutoBan = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("AUTO_BAN", bot.AutoBan)
+	}
+}
+
+func welcomeMessageHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bot.WelcomeMessage = toggleBotProperty(w, r)
+		UpdateBoolEnvVar("WELCOME_MESSAGE", bot.WelcomeMessage)
+	}
+}
+
+func welcomeContentHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+
+		welcomeText := r.Form.Get("welcomeText")
+		welcomePhoto := r.Form.Get("welcomePhoto")
+		welcomeLinks := r.Form.Get("welcomeLinks")
+
+		bot.WelcomeText = welcomeText
+		bot.WelcomePhoto = welcomePhoto
+		bot.WelcomeLinks = welcomeLinks
+
+		UpdateEnvVar("WELCOME_TEXT", welcomeText)
+		UpdateEnvVar("WELCOME_PHOTO", welcomePhoto)
+		UpdateEnvVar("WELCOME_LINKS", welcomeLinks)
+
+		log.Printf("Welcome content updated: text=%d chars, photo=%s, links=%d chars",
+			len(welcomeText), welcomePhoto, len(welcomeLinks))
 	}
 }
 
@@ -227,6 +255,8 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setChannelForward", channelForwardHandler(bot))
 	r.HandleFunc("/setAdminForward", adminForwardHandler(bot))
 	r.HandleFunc("/setAutoBan", autoBanHandler(bot))
+	r.HandleFunc("/setWelcomeMessage", welcomeMessageHandler(bot))
+	r.HandleFunc("/setWelcomeContent", welcomeContentHandler(bot))
 	r.HandleFunc("/setChannel", channelHandler(bot))
 	r.HandleFunc("/setGroup", groupHandler(bot))
 	r.HandleFunc("/setAdmin", adminHandler(bot))

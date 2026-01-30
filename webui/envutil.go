@@ -10,9 +10,43 @@ import (
 
 const envFilePath = ".env"
 
+// needsQuoting returns true if the value contains special characters
+func needsQuoting(value string) bool {
+	return strings.ContainsAny(value, " \t\n\r\"'`$\\")
+}
+
+// quoteValue wraps a value in double quotes and escapes inner quotes
+func quoteValue(value string) string {
+	escaped := strings.ReplaceAll(value, `\`, `\\`)
+	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+	escaped = strings.ReplaceAll(escaped, "\n", `\n`)
+	escaped = strings.ReplaceAll(escaped, "\r", `\r`)
+	return `"` + escaped + `"`
+}
+
+// unquoteValue removes quotes and unescapes a value
+func unquoteValue(value string) string {
+	if len(value) < 2 {
+		return value
+	}
+	// Check if quoted with double or single quotes
+	if (value[0] == '"' && value[len(value)-1] == '"') ||
+		(value[0] == '\'' && value[len(value)-1] == '\'') {
+		unquoted := value[1 : len(value)-1]
+		// Unescape common sequences
+		unquoted = strings.ReplaceAll(unquoted, `\n`, "\n")
+		unquoted = strings.ReplaceAll(unquoted, `\r`, "\r")
+		unquoted = strings.ReplaceAll(unquoted, `\"`, `"`)
+		unquoted = strings.ReplaceAll(unquoted, `\\`, `\`)
+		return unquoted
+	}
+	return value
+}
+
 // UpdateEnvVar updates or creates a key-value pair in the .env file
 func UpdateEnvVar(key, value string) error {
 	envVars := make(map[string]string)
+	var keyOrder []string
 
 	// Read existing .env file if it exists
 	file, err := os.Open(envFilePath)
@@ -27,12 +61,18 @@ func UpdateEnvVar(key, value string) error {
 			}
 			parts := strings.SplitN(line, "=", 2)
 			if len(parts) == 2 {
-				envVars[parts[0]] = parts[1]
+				k := parts[0]
+				v := unquoteValue(parts[1])
+				envVars[k] = v
+				keyOrder = append(keyOrder, k)
 			}
 		}
 	}
 
 	// Update or add the new key-value pair
+	if _, exists := envVars[key]; !exists {
+		keyOrder = append(keyOrder, key)
+	}
 	envVars[key] = value
 
 	// Write back to .env file
@@ -43,7 +83,12 @@ func UpdateEnvVar(key, value string) error {
 	defer outputFile.Close()
 
 	writer := bufio.NewWriter(outputFile)
-	for k, v := range envVars {
+	for _, k := range keyOrder {
+		v := envVars[k]
+		// Quote values that need it
+		if needsQuoting(v) {
+			v = quoteValue(v)
+		}
 		_, err := writer.WriteString(fmt.Sprintf("%s=%s\n", k, v))
 		if err != nil {
 			return fmt.Errorf("error writing to .env file: %v", err)
@@ -54,7 +99,7 @@ func UpdateEnvVar(key, value string) error {
 	// Also update the environment variable for the current process
 	os.Setenv(key, value)
 
-	log.Printf("Updated .env: %s=%s", key, value)
+	log.Printf("Updated .env: %s", key)
 	return nil
 }
 

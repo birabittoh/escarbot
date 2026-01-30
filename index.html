@@ -109,6 +109,15 @@
             flex: 1;
         }
 
+        .toggle-label-clickable {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .toggle-label-clickable:hover {
+            color: #a78bfa;
+        }
+
         /* Custom Toggle Switch */
         .switch {
             position: relative;
@@ -501,6 +510,52 @@
             transform: scale(1.15);
         }
 
+        .placeholder-info {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #d1d5db;
+        }
+
+        .placeholder-info strong {
+            color: #a78bfa;
+        }
+
+        .placeholder-list {
+            margin-top: 8px;
+            line-height: 1.8;
+        }
+
+        .placeholder-list code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+        }
+
+        .link-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .link-input-group input {
+            flex: 1;
+        }
+
+        .link-input-group input:first-child {
+            flex: 0.4;
+        }
+
+        .link-input-group input:nth-child(2) {
+            flex: 0.6;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -601,6 +656,16 @@
                         <label class="toggle-label" for="autoBanToggle">Auto-Ban</label>
                         <label class="switch">
                             <input type="checkbox" id="autoBanToggle" name="toggle"{{ if .AutoBan }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </form>
+
+                <form action="/setWelcomeMessage" id="welcomeMessageForm">
+                    <div class="toggle-container">
+                        <label class="toggle-label toggle-label-clickable" for="welcomeMessageToggle" onclick="event.preventDefault(); openWelcomeModal();">Welcome Message ⚙️</label>
+                        <label class="switch">
+                            <input type="checkbox" id="welcomeMessageToggle" name="toggle"{{ if .WelcomeMessage }} checked{{ end }}>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -741,6 +806,55 @@
         <div class="reaction-picker-grid" id="reactionGrid"></div>
     </div>
 
+    <!-- Welcome Message Settings Modal -->
+    <div class="reaction-picker-overlay" id="welcomeOverlay" onclick="closeWelcomeModal()"></div>
+    <div class="reaction-picker" id="welcomeModal" style="max-width: 600px;">
+        <div class="reaction-picker-title">Welcome Message Settings</div>
+
+        <div class="placeholder-info">
+            <strong>Available placeholders:</strong>
+            <div class="placeholder-list">
+                <code>{USER_NAME}</code> - User's first name<br>
+                <code>{USER_ID}</code> - User's Telegram ID<br>
+                <code>{GROUP_ID}</code> - Group's Telegram ID
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Markdown syntax:</strong>
+                <div class="placeholder-list">
+                    <code>*bold*</code> - <strong>bold</strong><br>
+                    <code>_italic_</code> - <em>italic</em><br>
+                    <code>[text](url)</code> - link
+                </div>
+            </div>
+        </div>
+
+        <form id="welcomeSettingsForm">
+            <div class="input-group">
+                <label class="input-label" for="welcomeText">Welcome Text (Markdown)</label>
+                <textarea id="welcomeText" name="welcomeText" placeholder="Enter welcome message with Markdown formatting...">{{ .WelcomeText }}</textarea>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" for="welcomePhoto">Photo URL (optional)</label>
+                <input type="text" id="welcomePhoto" name="welcomePhoto" value="{{ .WelcomePhoto }}" placeholder="https://example.com/image.jpg">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Welcome Links</label>
+                <div class="placeholder-info" style="margin-bottom: 10px;">
+                    Add button links that appear below the welcome message.
+                </div>
+                <div id="welcomeLinksContainer"></div>
+                <button type="button" id="addLinkBtn" class="btn-add" style="margin-top: 10px;">Add Link</button>
+            </div>
+
+            <div class="button-group">
+                <button type="button" onclick="closeWelcomeModal()" style="background: #4b5563;">Cancel</button>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/"
         const sendMessageUrl = baseUrl + "sendMessage"
@@ -774,6 +888,118 @@
         handleToggle('channelForwardToggle', '/setChannelForward');
         handleToggle('adminForwardToggle', '/setAdminForward');
         handleToggle('autoBanToggle', '/setAutoBan');
+        handleToggle('welcomeMessageToggle', '/setWelcomeMessage');
+
+        // Welcome Message Modal
+        let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
+
+        function parseWelcomeLinks(linksStr) {
+            if (!linksStr) return [];
+            return linksStr.split('\n').filter(line => line.includes('|')).map(line => {
+                const [text, url] = line.split('|', 2);
+                return { text: text || '', url: url || '' };
+            });
+        }
+
+        function createLinkInput(text = '', url = '') {
+            const div = document.createElement('div');
+            div.className = 'link-input-group';
+
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.name = 'linkText';
+            textInput.value = text;
+            textInput.placeholder = 'Button text';
+
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.name = 'linkUrl';
+            urlInput.value = url;
+            urlInput.placeholder = 'URL (supports placeholders)';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-remove';
+            removeBtn.textContent = '🗑️';
+            removeBtn.addEventListener('click', () => div.remove());
+
+            div.appendChild(textInput);
+            div.appendChild(urlInput);
+            div.appendChild(removeBtn);
+            return div;
+        }
+
+        function openWelcomeModal() {
+            const container = document.getElementById('welcomeLinksContainer');
+            container.innerHTML = '';
+
+            const links = parseWelcomeLinks(welcomeLinksData);
+            if (links.length === 0) {
+                container.appendChild(createLinkInput());
+            } else {
+                links.forEach(link => {
+                    container.appendChild(createLinkInput(link.text, link.url));
+                });
+            }
+
+            document.getElementById('welcomeOverlay').style.display = 'block';
+            document.getElementById('welcomeModal').style.display = 'block';
+        }
+
+        function closeWelcomeModal() {
+            document.getElementById('welcomeOverlay').style.display = 'none';
+            document.getElementById('welcomeModal').style.display = 'none';
+        }
+
+        document.getElementById('addLinkBtn').addEventListener('click', () => {
+            document.getElementById('welcomeLinksContainer').appendChild(createLinkInput());
+        });
+
+        document.getElementById('welcomeSettingsForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const welcomeText = document.getElementById('welcomeText').value;
+            const welcomePhoto = document.getElementById('welcomePhoto').value;
+
+            // Collect links
+            const linkTexts = Array.from(document.querySelectorAll('input[name="linkText"]')).map(i => i.value);
+            const linkUrls = Array.from(document.querySelectorAll('input[name="linkUrl"]')).map(i => i.value);
+
+            const links = [];
+            for (let i = 0; i < linkTexts.length; i++) {
+                if (linkTexts[i] && linkUrls[i]) {
+                    links.push(linkTexts[i] + '|' + linkUrls[i]);
+                }
+            }
+            const welcomeLinks = links.join('\n');
+
+            const params = new URLSearchParams();
+            params.append('welcomeText', welcomeText);
+            params.append('welcomePhoto', welcomePhoto);
+            params.append('welcomeLinks', welcomeLinks);
+
+            fetch('/setWelcomeContent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params
+            }).then(() => {
+                // Update local data
+                welcomeLinksData = welcomeLinks;
+
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Saved';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    closeWelcomeModal();
+                }, 1000);
+            }).catch(err => {
+                console.error('Error updating welcome settings:', err);
+                alert('Error saving welcome settings');
+            });
+        });
 
         // Handle ID updates without page reload
         function handleIdForm(formId, endpoint) {

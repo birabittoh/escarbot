@@ -19,15 +19,20 @@ type EscarBot struct {
 	ChannelForward     bool
 	AdminForward       bool
 	AutoBan            bool
+	WelcomeMessage     bool
 	ChannelID          int64
 	GroupID            int64
 	AdminID            int64
+	LogChannelID       int64
 	BannedWords        []string
 	AvailableReactions map[int64][]string
 	MessageCache       []CachedMessage
 	CacheMutex         sync.Mutex
 	MaxCacheSize       int
 	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
+	WelcomeText        string
+	WelcomeLinks       string
+	WelcomePhoto       string
 }
 
 // CachedMessage represents a message stored in cache
@@ -88,7 +93,7 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 	return reactions
 }
 
-func NewBot(botToken string, channelId string, groupId string, adminId string) *EscarBot {
+func NewBot(botToken string, channelId string, groupId string, adminId, logChannelId string) *EscarBot {
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
 		log.Panic(err)
@@ -113,6 +118,11 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		log.Fatal("Error while converting ADMIN_ID to int64:", err)
 	}
 
+	logChannelIdInt, err := strconv.ParseInt(logChannelId, 10, 64)
+	if err != nil {
+		log.Fatal("Error while converting LOG_CHANNEL_ID to int64:", err)
+	}
+
 	// Read banned words from environment variable (comma-separated)
 	bannedWordsEnv := os.Getenv("BANNED_WORDS")
 	var bannedWords []string
@@ -134,6 +144,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 	channelForward := getBoolEnv("CHANNEL_FORWARD", true)
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
+	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
 	// Get available reactions for the group
 	availableReactionsMap := make(map[int64][]string)
@@ -145,13 +156,18 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		ChannelForward:     channelForward,
 		AdminForward:       adminForward,
 		AutoBan:            autoBan,
+		WelcomeMessage:     welcomeMessage,
 		ChannelID:          channelIdInt,
 		GroupID:            groupIdInt,
 		AdminID:            adminIdInt,
+		LogChannelID:       logChannelIdInt,
 		BannedWords:        bannedWords,
 		AvailableReactions: availableReactionsMap,
 		MessageCache:       make([]CachedMessage, 0, maxCacheSize),
 		MaxCacheSize:       maxCacheSize,
+		WelcomeText:        os.Getenv("WELCOME_TEXT"),
+		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
+		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
@@ -180,9 +196,8 @@ func BotPoll(escarbot *EscarBot) {
 		if msg != nil { // If we got a message
 			addMessageToCache(escarbot, msg)
 
-			if escarbot.AutoBan {
-				handleNewChatMembers(escarbot, msg)
-			}
+			handleNewChatMembers(escarbot, msg)
+
 			if escarbot.LinkDetection {
 				handleLinks(bot, msg)
 			}

@@ -1,12 +1,20 @@
 package telegram
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
-	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
+
+func replacePlaceholders(escarbot *EscarBot, text string, user tgbotapi.User) string {
+	replaced := strings.ReplaceAll(text, "{GROUP_ID}", strconv.FormatInt(escarbot.GroupID, 10))
+	replaced = strings.ReplaceAll(replaced, "{USER_NAME}", user.FirstName)
+	replaced = strings.ReplaceAll(replaced, "{USER_ID}", strconv.FormatInt(user.ID, 10))
+	return replaced
+}
 
 // handleNewChatMembers handles new members joining the group
 func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
@@ -21,11 +29,11 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 		}
 
 		// Check user's personal channel
-		if hasBannedContent(escarbot, user.ID) {
+		if escarbot.AutoBan && hasBannedContent(escarbot, user.ID) {
 			log.Printf("User %d (%s) has banned content in personal channel, proceeding with ban", user.ID, user.UserName)
 
 			// Ban user and revoke all their messages
-			banUser(escarbot.Bot, message.Chat.ID, user.ID)
+			banUser(escarbot, message.Chat, user)
 
 			// Delete Telegram's join message
 			deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
@@ -36,8 +44,52 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 				log.Printf("Join message deleted (chat %d)", message.Chat.ID)
 			}
 
-			// Delete welcome message from other bot
-			go deleteNextMessage(escarbot, message.Chat.ID, message.MessageID)
+			continue
+		}
+
+		if !escarbot.WelcomeMessage {
+			continue
+		}
+
+		// Send welcome message
+		links := strings.Split(escarbot.WelcomeLinks, "\n")
+		var buttons [][]tgbotapi.InlineKeyboardButton
+		for _, line := range links {
+			parts := strings.SplitN(line, "|", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			text := parts[0]
+			url := replacePlaceholders(escarbot, parts[1], user)
+			button := tgbotapi.NewInlineKeyboardButtonURL(text, url)
+			buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(button))
+		}
+
+		var welcomeMsg tgbotapi.Chattable
+		if escarbot.WelcomePhoto == "" {
+			msg := tgbotapi.NewMessage(message.Chat.ID, replacePlaceholders(escarbot, escarbot.WelcomeText, user))
+			msg.ParseMode = "Markdown"
+			if len(buttons) > 0 {
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
+			}
+			welcomeMsg = msg
+		} else if escarbot.WelcomeText != "" {
+			photo := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileURL(escarbot.WelcomePhoto))
+			photo.Caption = replacePlaceholders(escarbot, escarbot.WelcomeText, user)
+			photo.ParseMode = "Markdown"
+			if len(buttons) > 0 {
+				photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
+			}
+			welcomeMsg = photo
+		} else {
+			continue
+		}
+
+		_, err := escarbot.Bot.Send(welcomeMsg)
+		if err != nil {
+			log.Printf("Error sending welcome message to user %d: %v", user.ID, err)
+		} else {
+			log.Printf("Welcome message sent to user %d", user.ID)
 		}
 	}
 }
@@ -60,7 +112,7 @@ func hasBannedContent(escarbot *EscarBot, userID int64) bool {
 	if chat.PersonalChat != nil {
 		channelName := strings.ToLower(chat.PersonalChat.Title)
 
-		// Check for banned words (case insensitive)
+		// Check for banned words
 		for _, word := range escarbot.BannedWords {
 			if strings.Contains(channelName, strings.ToLower(word)) {
 				log.Printf("Found banned word '%s' in personal channel: %s", word, chat.PersonalChat.Title)
@@ -73,22 +125,35 @@ func hasBannedContent(escarbot *EscarBot, userID int64) bool {
 }
 
 // banUser bans a user from the group
-func banUser(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
+func banUser(escarbot *EscarBot, chat tgbotapi.Chat, user tgbotapi.User) {
 	banConfig := tgbotapi.BanChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
 			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: chatID,
+				ChatID: chat.ID,
 			},
-			UserID: userID,
+			UserID: user.ID,
 		},
 		RevokeMessages: true,
 	}
 
-	_, err := bot.Request(banConfig)
+	_, err := escarbot.Bot.Request(banConfig)
 	if err != nil {
-		log.Printf("Error banning user %d: %v", userID, err)
+		log.Printf("Error banning user %d: %v", user.ID, err)
 	} else {
-		log.Printf("User %d banned successfully", userID)
+		log.Printf("User %d banned successfully", user.ID)
+	}
+
+	msgText := strings.Builder{}
+	msgText.WriteString("🚷 #BAN\n")
+	msgText.WriteString(fmt.Sprintf("<b>User</b>: <a href=\"tg://user?id=%d\">%s</a> [<code>%d</code>]\n", user.ID, user.FirstName, user.ID))
+	msgText.WriteString("#id" + strconv.FormatInt(user.ID, 10))
+
+	logMsg := tgbotapi.NewMessage(chat.ID, msgText.String())
+	logMsg.ParseMode = "HTML"
+	logMsg.LinkPreviewOptions.IsDisabled = true
+	_, err = escarbot.Bot.Send(logMsg)
+	if err != nil {
+		log.Printf("Error sending ban log message: %v", err)
 	}
 }
 
@@ -129,19 +194,4 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if escarbot.OnMessageCached != nil {
 		escarbot.OnMessageCached(cached)
 	}
-}
-
-// deleteNextMessage deletes the welcome message from another bot
-func deleteNextMessage(escarbot *EscarBot, chatID int64, messageID int) {
-	// Wait 1 second to give the other bot time to send the welcome message
-	time.Sleep(time.Second)
-
-	deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID+1)
-	_, err := escarbot.Bot.Request(deleteMsg)
-	if err != nil {
-		log.Printf("Error deleting welcome message: %v", err)
-	} else {
-		log.Printf("Welcome message deleted (chat %d, msg %d)", chatID, messageID+1)
-	}
-
 }
