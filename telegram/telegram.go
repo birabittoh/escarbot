@@ -13,6 +13,7 @@ type EscarBot struct {
 	LinkDetection  bool
 	ChannelForward bool
 	AdminForward   bool
+	AgeBan         bool
 	ChannelID      int64
 	GroupID        int64
 	AdminID        int64
@@ -49,6 +50,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		LinkDetection:  true,
 		ChannelForward: true,
 		AdminForward:   true,
+		AgeBan:         true,
 		ChannelID:      channelIdInt,
 		GroupID:        groupIdInt,
 		AdminID:        adminIdInt,
@@ -65,6 +67,10 @@ func BotPoll(escarbot *EscarBot) {
 	for update := range updates {
 		msg := update.Message
 		if msg != nil { // If we got a message
+			if escarbot.AgeBan {
+				handleNewChatMembers(escarbot, msg)
+				checkAndDeleteMessage(bot, msg)
+			}
 			if escarbot.LinkDetection {
 				handleLinks(bot, msg)
 			}
