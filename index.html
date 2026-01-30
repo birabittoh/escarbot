@@ -425,7 +425,7 @@
                 flex-direction: column;
             }
 
-            button {
+            .button-group button {
                 width: 100%;
             }
 
@@ -439,23 +439,22 @@
                 max-height: 300px;
             }
 
-            .input-with-button {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
+            /* Compact buttons for input rows */
             .input-with-button button {
-                margin-top: 10px;
-            }
-
-            .input-with-clear {
-                flex-direction: column;
-                align-items: stretch;
+                padding: 8px 12px;
+                font-size: 0.8rem;
             }
 
             .btn-clear {
-                margin-top: 10px;
-                width: 100%;
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                min-width: auto;
+            }
+
+            .btn-remove {
+                padding: 8px 10px;
+                font-size: 0.85rem;
+                min-width: auto;
             }
         }
     </style>
