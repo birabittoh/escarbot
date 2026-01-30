@@ -65,7 +65,9 @@ func hasAdultChannel(bot *tgbotapi.BotAPI, userID int64) bool {
 func banUser(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 	banConfig := tgbotapi.BanChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
-			ChatID: chatID,
+			ChatConfig: tgbotapi.ChatConfig{
+				ChatID: chatID,
+			},
 			UserID: userID,
 		},
 		RevokeMessages: true,
