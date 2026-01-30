@@ -63,6 +63,12 @@ func adminForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
+func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bot.AutoBan = toggleBotProperty(w, r)
+	}
+}
+
 func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		res, err := getChatID(w, r)
@@ -105,6 +111,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setLinks", linksHandler(bot))
 	r.HandleFunc("/setChannelForward", channelForwardHandler(bot))
 	r.HandleFunc("/setAdminForward", adminForwardHandler(bot))
+	r.HandleFunc("/setAutoBan", autoBanHandler(bot))
 	r.HandleFunc("/setChannel", channelHandler(bot))
 	r.HandleFunc("/setGroup", groupHandler(bot))
 	r.HandleFunc("/setAdmin", adminHandler(bot))

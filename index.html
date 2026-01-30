@@ -46,6 +46,13 @@
         </label>
     </form>
 
+    <form action="/setAutoBan" id="autoBanForm">
+        <label>
+            <input type="checkbox" id="autoBanToggle" name="toggle"{{ if .AutoBan }} checked{{ end }}>
+            Auto-ban users with banned words in personal channel
+        </label>
+    </form>
+
     <form action="/setChannel" id="channelForm">
         <label>
             Channel ID:
@@ -100,6 +107,7 @@
         handleToggle('linkToggle', 'linkForm');
         handleToggle('channelForwardToggle', 'channelForwardForm');
         handleToggle('adminForwardToggle', 'adminForwardForm');
+        handleToggle('autoBanToggle', 'autoBanForm');
 
         document.getElementById("customMessageButton").addEventListener("click", (event) => {
             event.preventDefault()

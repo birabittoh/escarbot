@@ -2,7 +2,10 @@ package telegram
 
 import (
 	"log"
+	"os"
 	"strconv"
+	"strings"
+	"sync"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
@@ -13,10 +16,22 @@ type EscarBot struct {
 	LinkDetection  bool
 	ChannelForward bool
 	AdminForward   bool
-	AgeBan         bool
+	AutoBan        bool
 	ChannelID      int64
 	GroupID        int64
 	AdminID        int64
+	BannedWords    []string
+	MessageCache   map[int64][]CachedMessage
+	CacheMutex     sync.Mutex
+	MaxCacheSize   int
+}
+
+// CachedMessage represents a message stored in cache
+type CachedMessage struct {
+	MessageID int
+	From      *tgbotapi.User
+	Text      string
+	Entities  []tgbotapi.MessageEntity
 }
 
 func NewBot(botToken string, channelId string, groupId string, adminId string) *EscarBot {
@@ -44,16 +59,35 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		log.Fatal("Error while converting ADMIN_ID to int64:", err)
 	}
 
+	// Read banned words from environment variable (comma-separated)
+	bannedWordsEnv := os.Getenv("BANNED_WORDS")
+	var bannedWords []string
+	if bannedWordsEnv != "" {
+		bannedWords = strings.Split(bannedWordsEnv, ",")
+		// Trim whitespace from each word
+		for i, word := range bannedWords {
+			bannedWords[i] = strings.TrimSpace(word)
+		}
+		log.Printf("Loaded %d banned words from BANNED_WORDS env", len(bannedWords))
+	} else {
+		// Default banned words if env not set
+		bannedWords = []string{"18+"}
+		log.Printf("Using default banned words: %v", bannedWords)
+	}
+
 	return &EscarBot{
 		Bot:            bot,
 		Power:          true,
 		LinkDetection:  true,
 		ChannelForward: true,
 		AdminForward:   true,
-		AgeBan:         true,
+		AutoBan:        true,
 		ChannelID:      channelIdInt,
 		GroupID:        groupIdInt,
 		AdminID:        adminIdInt,
+		BannedWords:    bannedWords,
+		MessageCache:   make(map[int64][]CachedMessage),
+		MaxCacheSize:   15,
 	}
 }
 
@@ -67,9 +101,9 @@ func BotPoll(escarbot *EscarBot) {
 	for update := range updates {
 		msg := update.Message
 		if msg != nil { // If we got a message
-			if escarbot.AgeBan {
+			if escarbot.AutoBan {
+				addMessageToCache(escarbot, msg)
 				handleNewChatMembers(escarbot, msg)
-				checkAndDeleteMessage(bot, msg)
 			}
 			if escarbot.LinkDetection {
 				handleLinks(bot, msg)
