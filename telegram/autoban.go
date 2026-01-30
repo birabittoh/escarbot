@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -37,8 +36,8 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 				log.Printf("Join message deleted (chat %d)", message.Chat.ID)
 			}
 
-			// Search and delete welcome message from other bot in cache
-			go findAndDeleteWelcomeMessage(escarbot, message.Chat.ID, user.ID, user.UserName)
+			// Delete welcome message from other bot
+			go deleteNextMessage(escarbot, message.Chat.ID, message.MessageID)
 		}
 	}
 }
@@ -126,74 +125,23 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		escarbot.MessageCache = escarbot.MessageCache[:escarbot.MaxCacheSize]
 	}
 
-	log.Printf("Cached message #%d from chat %d (total: %d messages in cache)", message.MessageID, message.Chat.ID, len(escarbot.MessageCache))
-
 	// Broadcast message if callback is set
 	if escarbot.OnMessageCached != nil {
 		escarbot.OnMessageCached(cached)
 	}
 }
 
-// findAndDeleteWelcomeMessage searches and deletes the welcome message from another bot
-func findAndDeleteWelcomeMessage(escarbot *EscarBot, chatID int64, userID int64, userName string) {
+// deleteNextMessage deletes the welcome message from another bot
+func deleteNextMessage(escarbot *EscarBot, chatID int64, messageID int) {
 	// Wait 1 second to give the other bot time to send the welcome message
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 
-	escarbot.CacheMutex.Lock()
-	defer escarbot.CacheMutex.Unlock()
-
-	// Search in recent messages from this chat (newest first, so start from beginning)
-	for i, msg := range escarbot.MessageCache {
-		// Skip messages from other chats
-		if msg.ChatID != chatID {
-			continue
-		}
-
-		// Check if message contains the nickname or user ID
-		if containsUser(msg, userID, userName) {
-			deleteMsg := tgbotapi.NewDeleteMessage(chatID, msg.MessageID)
-			_, err := escarbot.Bot.Request(deleteMsg)
-			if err != nil {
-				log.Printf("Error deleting welcome message: %v", err)
-			} else {
-				log.Printf("Welcome message found and deleted (chat %d, msg %d)", chatID, msg.MessageID)
-			}
-
-			// Remove from cache
-			escarbot.MessageCache = append(escarbot.MessageCache[:i], escarbot.MessageCache[i+1:]...)
-			return
-		}
+	deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID+1)
+	_, err := escarbot.Bot.Request(deleteMsg)
+	if err != nil {
+		log.Printf("Error deleting welcome message: %v", err)
+	} else {
+		log.Printf("Welcome message deleted (chat %d, msg %d)", chatID, messageID+1)
 	}
 
-	log.Printf("No welcome message found for user %d", userID)
-}
-
-// containsUser checks if a message contains references to a specific user
-func containsUser(msg CachedMessage, userID int64, userName string) bool {
-	// Check in message text
-	userIDStr := fmt.Sprintf("%d", userID)
-	if strings.Contains(msg.Text, userIDStr) || (userName != "" && strings.Contains(msg.Text, userName)) {
-		return true
-	}
-
-	// Check in entities (text_mention, mention)
-	for _, entity := range msg.Entities {
-		// Text mention: when user is mentioned without username
-		if entity.Type == "text_mention" && entity.User != nil && entity.User.ID == userID {
-			return true
-		}
-
-		// Username mention: @username
-		if entity.Type == "mention" && userName != "" {
-			// Extract mention from text
-			if entity.Offset+entity.Length <= len(msg.Text) {
-				mention := msg.Text[entity.Offset : entity.Offset+entity.Length]
-				if strings.TrimPrefix(mention, "@") == userName {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
 }
