@@ -88,6 +88,11 @@ func markForDeletion(chatID int64, joinMessageID int) {
 
 // checkAndDeleteMessage controlla se il messaggio deve essere cancellato (es. messaggio di benvenuto)
 func checkAndDeleteMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	// Considera solo messaggi di altri bot
+	if message.From == nil || !message.From.IsBot || message.From.ID == bot.Self.ID {
+		return
+	}
+
 	pendingMutex.Lock()
 	joinMessageID, exists := pendingDelete[message.Chat.ID]
 	if exists && message.MessageID > joinMessageID {
