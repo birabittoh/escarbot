@@ -102,26 +102,31 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
 
+	// Get available reactions for this chat
+	reactions := getAvailableReactions(escarbot, message.Chat.ID)
+
 	cached := CachedMessage{
-		MessageID:      message.MessageID,
-		ChatID:         message.Chat.ID,
-		FromUsername:   message.From.UserName,
-		FromFirstName:  message.From.FirstName,
-		Text:           message.Text,
-		Entities:       message.Entities,
-		ThreadID:       message.MessageThreadID,
-		IsTopicMessage: message.IsTopicMessage,
+		MessageID:          message.MessageID,
+		ChatID:             message.Chat.ID,
+		FromUsername:       message.From.UserName,
+		FromFirstName:      message.From.FirstName,
+		Text:               message.Text,
+		Entities:           message.Entities,
+		ThreadID:           message.MessageThreadID,
+		IsTopicMessage:     message.IsTopicMessage,
+		AvailableReactions: reactions,
+		// Reactions field left empty - not available in current Message struct
 	}
 
-	cache := escarbot.MessageCache[message.Chat.ID]
-	cache = append(cache, cached)
+	// Prepend to keep newest messages first
+	escarbot.MessageCache = append([]CachedMessage{cached}, escarbot.MessageCache...)
 
-	// Keep only last N messages
-	if len(cache) > escarbot.MaxCacheSize {
-		cache = cache[1:]
+	// Keep only last N messages (remove from end)
+	if len(escarbot.MessageCache) > escarbot.MaxCacheSize {
+		escarbot.MessageCache = escarbot.MessageCache[:escarbot.MaxCacheSize]
 	}
 
-	escarbot.MessageCache[message.Chat.ID] = cache
+	log.Printf("Cached message #%d from chat %d (total: %d messages in cache)", message.MessageID, message.Chat.ID, len(escarbot.MessageCache))
 
 	// Broadcast message if callback is set
 	if escarbot.OnMessageCached != nil {
@@ -135,15 +140,14 @@ func findAndDeleteWelcomeMessage(escarbot *EscarBot, chatID int64, userID int64,
 	time.Sleep(1 * time.Second)
 
 	escarbot.CacheMutex.Lock()
-	cache := escarbot.MessageCache[chatID]
-	escarbot.CacheMutex.Unlock()
+	defer escarbot.CacheMutex.Unlock()
 
-	// Search in recent messages (from newest to oldest)
-	for i := len(cache) - 1; i >= 0; i-- {
-		msg := cache[i]
-
-		// We can't reliably determine if sender is a bot from cache anymore
-		// So we check all messages and look for user mentions
+	// Search in recent messages from this chat (newest first, so start from beginning)
+	for i, msg := range escarbot.MessageCache {
+		// Skip messages from other chats
+		if msg.ChatID != chatID {
+			continue
+		}
 
 		// Check if message contains the nickname or user ID
 		if containsUser(msg, userID, userName) {
@@ -156,11 +160,7 @@ func findAndDeleteWelcomeMessage(escarbot *EscarBot, chatID int64, userID int64,
 			}
 
 			// Remove from cache
-			escarbot.CacheMutex.Lock()
-			cache = append(cache[:i], cache[i+1:]...)
-			escarbot.MessageCache[chatID] = cache
-			escarbot.CacheMutex.Unlock()
-
+			escarbot.MessageCache = append(escarbot.MessageCache[:i], escarbot.MessageCache[i+1:]...)
 			return
 		}
 	}

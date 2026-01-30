@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/birabittoh/escarbot/telegram"
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 type WebUI struct {
@@ -19,7 +20,15 @@ type WebUI struct {
 	port string
 }
 
-var indexTemplate = template.Must(template.ParseFiles("index.html"))
+var indexTemplate = template.Must(template.New("index.html").Funcs(template.FuncMap{
+	"toJSON": func(v interface{}) (string, error) {
+		bytes, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+		return string(bytes), nil
+	},
+}).ParseFiles("index.html"))
 
 func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -145,25 +154,59 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.CacheMutex.Lock()
 		defer bot.CacheMutex.Unlock()
 
-		// Get messages for the group chat
-		messages := bot.MessageCache[bot.GroupID]
-
-		response := []telegram.CachedMessage{}
-		// Return last 10 messages in reverse order (newest first)
-		start := max(len(messages)-10, 0)
-
-		for i := len(messages) - 1; i >= start; i-- {
-			msg := messages[i]
-
+		// Messages are already ordered (newest first), just truncate long texts
+		response := make([]telegram.CachedMessage, len(bot.MessageCache))
+		for i, msg := range bot.MessageCache {
 			// Truncate long messages
 			if len(msg.Text) > 100 {
 				msg.Text = msg.Text[:100] + "..."
 			}
-
-			response = append(response, msg)
+			response[i] = msg
 		}
 
+		log.Printf("Message cache request: returning %d total messages", len(response))
 		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+
+		chatID, err := strconv.ParseInt(r.Form.Get("chat_id"), 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid chat_id", http.StatusBadRequest)
+			return
+		}
+
+		messageID, err := strconv.Atoi(r.Form.Get("message_id"))
+		if err != nil {
+			http.Error(w, "Invalid message_id", http.StatusBadRequest)
+			return
+		}
+
+		emoji := r.Form.Get("emoji")
+		if emoji == "" {
+			http.Error(w, "Missing emoji", http.StatusBadRequest)
+			return
+		}
+
+		// Create reaction
+		reaction := tgbotapi.ReactionType{
+			Type:  "emoji",
+			Emoji: emoji,
+		}
+
+		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, []tgbotapi.ReactionType{reaction}, false)
+		_, err = bot.Bot.Request(reactionConfig)
+		if err != nil {
+			log.Printf("Error setting reaction: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	}
 }
 
@@ -189,6 +232,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setAdmin", adminHandler(bot))
 	r.HandleFunc("/setBannedWords", bannedWordsHandler(bot))
 	r.HandleFunc("/api/messageCache", messageCacheHandler(bot))
+	r.HandleFunc("/setReaction", setReactionHandler(bot))
 	r.HandleFunc("/ws", wsHandler)
 
 	return WebUI{

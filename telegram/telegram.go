@@ -10,33 +10,82 @@ import (
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
+const maxCacheSize = 100
+
 type EscarBot struct {
-	Bot             *tgbotapi.BotAPI
-	Power           bool
-	LinkDetection   bool
-	ChannelForward  bool
-	AdminForward    bool
-	AutoBan         bool
-	ChannelID       int64
-	GroupID         int64
-	AdminID         int64
-	BannedWords     []string
-	MessageCache    map[int64][]CachedMessage
-	CacheMutex      sync.Mutex
-	MaxCacheSize    int
-	OnMessageCached func(CachedMessage) // Callback for when a message is cached
+	Bot                *tgbotapi.BotAPI
+	Power              bool
+	LinkDetection      bool
+	ChannelForward     bool
+	AdminForward       bool
+	AutoBan            bool
+	ChannelID          int64
+	GroupID            int64
+	AdminID            int64
+	BannedWords        []string
+	AvailableReactions map[int64][]string
+	MessageCache       []CachedMessage
+	CacheMutex         sync.Mutex
+	MaxCacheSize       int
+	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
 }
 
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
-	MessageID      int                      `json:"message_id"`
-	ChatID         int64                    `json:"chat_id"`
-	FromUsername   string                   `json:"from_username"`
-	FromFirstName  string                   `json:"from_first_name"`
-	Text           string                   `json:"text"`
-	Entities       []tgbotapi.MessageEntity `json:"entities,omitempty"`
-	ThreadID       int                      `json:"thread_id,omitempty"`
-	IsTopicMessage bool                     `json:"is_topic_message"`
+	MessageID          int                      `json:"message_id"`
+	ChatID             int64                    `json:"chat_id"`
+	FromUsername       string                   `json:"from_username"`
+	FromFirstName      string                   `json:"from_first_name"`
+	Text               string                   `json:"text"`
+	Entities           []tgbotapi.MessageEntity `json:"entities,omitempty"`
+	ThreadID           int                      `json:"thread_id,omitempty"`
+	IsTopicMessage     bool                     `json:"is_topic_message"`
+	AvailableReactions []string                 `json:"available_reactions,omitempty"`
+	Reactions          []tgbotapi.ReactionCount `json:"reactions,omitempty"`
+}
+
+// getAvailableReactions returns the available reactions for a chat
+// If not cached, it fetches them from Telegram API
+func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
+	// Check if already cached
+	if reactions, exists := escarbot.AvailableReactions[chatID]; exists {
+		return reactions
+	}
+
+	// Not cached, fetch from API
+	defaultReactions := []string{"👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨"}
+
+	chatConfig := tgbotapi.ChatInfoConfig{
+		ChatConfig: tgbotapi.ChatConfig{
+			ChatID: chatID,
+		},
+	}
+	chatInfo, err := escarbot.Bot.GetChat(chatConfig)
+
+	var reactions []string
+	if err != nil {
+		log.Printf("Warning: could not get chat info for reactions (chat %d): %v", chatID, err)
+		reactions = defaultReactions
+	} else if len(chatInfo.AvailableReactions) == 0 {
+		// Empty means all reactions are allowed
+		reactions = defaultReactions
+	} else {
+		// Extract emoji reactions
+		for _, reaction := range chatInfo.AvailableReactions {
+			if reaction.Type == "emoji" && reaction.Emoji != "" {
+				reactions = append(reactions, reaction.Emoji)
+			}
+		}
+		if len(reactions) == 0 {
+			reactions = defaultReactions
+		}
+	}
+
+	// Cache the result
+	escarbot.AvailableReactions[chatID] = reactions
+	log.Printf("Loaded %d available reactions for chat %d", len(reactions), chatID)
+
+	return reactions
 }
 
 func NewBot(botToken string, channelId string, groupId string, adminId string) *EscarBot {
@@ -86,29 +135,37 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
 
-	return &EscarBot{
-		Bot:            bot,
-		Power:          true,
-		LinkDetection:  linkDetection,
-		ChannelForward: channelForward,
-		AdminForward:   adminForward,
-		AutoBan:        autoBan,
-		ChannelID:      channelIdInt,
-		GroupID:        groupIdInt,
-		AdminID:        adminIdInt,
-		BannedWords:    bannedWords,
-		MessageCache:   make(map[int64][]CachedMessage),
-		MaxCacheSize:   100,
+	// Get available reactions for the group
+	availableReactionsMap := make(map[int64][]string)
+
+	escarbot := &EscarBot{
+		Bot:                bot,
+		Power:              true,
+		LinkDetection:      linkDetection,
+		ChannelForward:     channelForward,
+		AdminForward:       adminForward,
+		AutoBan:            autoBan,
+		ChannelID:          channelIdInt,
+		GroupID:            groupIdInt,
+		AdminID:            adminIdInt,
+		BannedWords:        bannedWords,
+		AvailableReactions: availableReactionsMap,
+		MessageCache:       make([]CachedMessage, 0, maxCacheSize),
+		MaxCacheSize:       maxCacheSize,
 	}
+
+	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
+
+	return escarbot
 }
 
 // getBoolEnv reads a boolean environment variable with a default value
 func getBoolEnv(key string, defaultValue bool) bool {
-	value := os.Getenv(key)
-	if value == "" {
+	value, err := strconv.ParseBool(os.Getenv(key))
+	if err != nil {
 		return defaultValue
 	}
-	return value == "true" || value == "1"
+	return value
 }
 
 func BotPoll(escarbot *EscarBot) {
