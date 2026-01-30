@@ -400,6 +400,15 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            header {
+                padding: 25px 15px;
+                margin-bottom: 30px;
+            }
+
             h1 {
                 font-size: 2rem;
             }
@@ -409,7 +418,7 @@
             }
 
             .card {
-                padding: 20px;
+                padding: 15px;
             }
 
             .button-group {
@@ -421,7 +430,32 @@
             }
 
             .message-section {
-                grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column-reverse;
+                gap: 20px;
+            }
+
+            .message-cache {
+                max-height: 300px;
+            }
+
+            .input-with-button {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .input-with-button button {
+                margin-top: 10px;
+            }
+
+            .input-with-clear {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-clear {
+                margin-top: 10px;
+                width: 100%;
             }
         }
     </style>
