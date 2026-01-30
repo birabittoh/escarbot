@@ -8,9 +8,9 @@ import (
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
-// Set di utenti i cui prossimi messaggi devono essere cancellati
+// Set di chat in cui il prossimo messaggio deve essere cancellato
 var (
-	pendingDelete = make(map[int64]int64) // userID -> chatID
+	pendingDelete = make(map[int64]int) // chatID -> joinMessageID
 	pendingMutex  sync.Mutex
 )
 
@@ -30,7 +30,7 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 		if hasAdultChannel(escarbot.Bot, user.ID) {
 			log.Printf("Utente %d (%s) ha un canale 18+, procedo con il ban", user.ID, user.UserName)
 			banUser(escarbot.Bot, message.Chat.ID, user.ID)
-			markForDeletion(user.ID, message.Chat.ID)
+			markForDeletion(message.Chat.ID, message.MessageID)
 		}
 	}
 }
@@ -79,31 +79,27 @@ func banUser(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 	}
 }
 
-// markForDeletion segna un utente per la cancellazione del prossimo messaggio
-func markForDeletion(userID int64, chatID int64) {
+// markForDeletion segna una chat per la cancellazione del prossimo messaggio
+func markForDeletion(chatID int64, joinMessageID int) {
 	pendingMutex.Lock()
 	defer pendingMutex.Unlock()
-	pendingDelete[userID] = chatID
+	pendingDelete[chatID] = joinMessageID
 }
 
-// checkAndDeleteMessage controlla se il messaggio deve essere cancellato
+// checkAndDeleteMessage controlla se il messaggio deve essere cancellato (es. messaggio di benvenuto)
 func checkAndDeleteMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
-	if message.From == nil {
-		return
-	}
-
 	pendingMutex.Lock()
-	chatID, exists := pendingDelete[message.From.ID]
-	if exists && chatID == message.Chat.ID {
-		delete(pendingDelete, message.From.ID)
+	joinMessageID, exists := pendingDelete[message.Chat.ID]
+	if exists && message.MessageID > joinMessageID {
+		delete(pendingDelete, message.Chat.ID)
 		pendingMutex.Unlock()
 
 		deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
 		_, err := bot.Request(deleteMsg)
 		if err != nil {
-			log.Printf("Errore nel cancellare messaggio di utente %d: %v", message.From.ID, err)
+			log.Printf("Errore nel cancellare messaggio di benvenuto: %v", err)
 		} else {
-			log.Printf("Messaggio di utente %d cancellato", message.From.ID)
+			log.Printf("Messaggio di benvenuto cancellato (chat %d)", message.Chat.ID)
 		}
 		return
 	}
