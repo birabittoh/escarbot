@@ -3,89 +3,611 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Telegram Control Panel</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/milligram@1.4.1/dist/milligram.min.css">
+    <title>EscarBot - Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        label {
-            display: inline-block;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
         body {
-            background-color: #1f1f1f;
-            color: #fff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e7;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
         }
-        button:hover {
-            background-color: #8842b3;
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
         }
-        input, textarea {
-            color: #fff;
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #e0e7ff;
+            opacity: 0.9;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #a78bfa;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .toggle-container:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: #d1d5db;
+            flex: 1;
+        }
+
+        /* Custom Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-with-button {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-with-button > div {
+            flex: 1;
+        }
+
+        .input-with-button button {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #a78bfa;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #e4e4e7;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1a1625;
+            color: #e4e4e7;
+        }
+
+        textarea {
             resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .word-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .word-input-group input {
+            flex: 1;
+        }
+
+        .btn-remove {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            padding: 10px 18px;
+            min-width: 44px;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-remove:hover {
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            margin-right: 10px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-add:hover {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+            margin-bottom: 30px;
+        }
+
+        #bannedWordsContainer {
+            margin-bottom: 20px;
+        }
+
+        .banned-words-wrapper {
+            margin-bottom: 25px;
+        }
+
+        .message-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .input-with-clear {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .input-with-clear > div {
+            flex: 1;
+        }
+
+        .btn-clear {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 10px 14px;
+            min-width: 44px;
+            margin-top: 30px;
+        }
+
+        .btn-clear:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .message-cache {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .message-cache-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 15px;
+        }
+
+        .cached-message {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .cached-message:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateX(4px);
+        }
+
+        .cached-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .cached-message-user {
+            font-weight: 600;
+            color: #8b5cf6;
+            font-size: 0.9rem;
+        }
+
+        .cached-message-id {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-family: 'Courier New', monospace;
+        }
+
+        .cached-message-text {
+            color: #d1d5db;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .cached-message-badge {
+            display: inline-block;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-top: 6px;
+        }
+
+        .no-messages {
+            text-align: center;
+            color: #6b7280;
+            padding: 30px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .message-section {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>EscarBot</h1>
+    <div class="container">
+        <header>
+            <h1>EscarBot</h1>
+            <p class="subtitle">Telegram Bot Control Panel</p>
+        </header>
 
-    <form action="/setLinks" id="linkForm">
-        <label>
-            <input type="checkbox" id="linkToggle" name="toggle"{{ if .LinkDetection }} checked{{ end }}>
-            Link detection in group messages
-        </label>
-    </form>
+        <div class="grid">
+            <!-- Toggle Controls Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-icon">⚙️</span>
+                    Features
+                </div>
 
-    <form action="/setChannelForward" id="channelForwardForm">
-        <label>
-            <input type="checkbox" id="channelForwardToggle" name="toggle"{{ if .ChannelForward }} checked{{ end }}>
-            Message forwarding (channel)
-        </label>
-    </form>
+                <form action="/setLinks" id="linkForm">
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="linkToggle">Link Detection</label>
+                        <label class="switch">
+                            <input type="checkbox" id="linkToggle" name="toggle"{{ if .LinkDetection }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </form>
 
-    <form action="/setAdminForward" id="adminForwardForm">
-        <label>
-            <input type="checkbox" id="adminForwardToggle" name="toggle"{{ if .AdminForward }} checked{{ end }}>
-            Message forwarding (admin)
-        </label>
-    </form>
+                <form action="/setChannelForward" id="channelForwardForm">
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="channelForwardToggle">Channel Forward</label>
+                        <label class="switch">
+                            <input type="checkbox" id="channelForwardToggle" name="toggle"{{ if .ChannelForward }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </form>
 
-    <form action="/setAutoBan" id="autoBanForm">
-        <label>
-            <input type="checkbox" id="autoBanToggle" name="toggle"{{ if .AutoBan }} checked{{ end }}>
-            Auto-ban users with banned words in personal channel
-        </label>
-    </form>
+                <form action="/setAdminForward" id="adminForwardForm">
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="adminForwardToggle">Admin Forward</label>
+                        <label class="switch">
+                            <input type="checkbox" id="adminForwardToggle" name="toggle"{{ if .AdminForward }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </form>
 
-    <form action="/setChannel" id="channelForm">
-        <label>
-            Channel ID:
-            <input type="text" id="channelId" name="id" value="{{ .ChannelID }}" required>
-        </label>
-        <button type="submit">Change</button>
-    </form>
+                <form action="/setAutoBan" id="autoBanForm">
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="autoBanToggle">Auto-Ban</label>
+                        <label class="switch">
+                            <input type="checkbox" id="autoBanToggle" name="toggle"{{ if .AutoBan }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </form>
+            </div>
 
-    <form action="/setGroup" id="groupForm">
-        <label>
-            Group ID:
-            <input type="text" id="groupId" name="id" value="{{ .GroupID }}" required>
-        </label>
-        <button type="submit">Change</button>
-    </form>
+            <!-- Chat IDs Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-icon">🆔</span>
+                    Chat configuration
+                </div>
 
-    <form action="/setAdmin" id="adminForm">
-        <label>
-            Admin ID:
-            <input type="text" id="adminId" name="id" value="{{ .AdminID }}" required>
-        </label>
-        <button type="submit">Change</button>
-    </form>
+                <form action="/setChannel" id="channelForm">
+                    <div class="input-with-button">
+                        <div>
+                            <label class="input-label" for="channelId">Channel ID</label>
+                            <input type="text" id="channelId" name="id" value="{{ .ChannelID }}" placeholder="Enter channel ID" required>
+                        </div>
+                        <button type="submit">Update</button>
+                    </div>
+                </form>
 
-    <form id="messageForm">
-        <label for="customMessage">Custom Message:</label>
-        <textarea id="customMessage" name="customMessage" rows="4" required></textarea>
-        <label>
-            Recipient:
-            <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
-        </label>
-        <button id="customMessageButton">Send</button>
-    </form>
+                <form action="/setGroup" id="groupForm">
+                    <div class="input-with-button">
+                        <div>
+                            <label class="input-label" for="groupId">Group ID</label>
+                            <input type="text" id="groupId" name="id" value="{{ .GroupID }}" placeholder="Enter group ID" required>
+                        </div>
+                        <button type="submit">Update</button>
+                    </div>
+                </form>
+
+                <form action="/setAdmin" id="adminForm">
+                    <div class="input-with-button">
+                        <div>
+                            <label class="input-label" for="adminId">Admin ID</label>
+                            <input type="text" id="adminId" name="id" value="{{ .AdminID }}" placeholder="Enter admin ID" required>
+                        </div>
+                        <button type="submit">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Banned Words Card (Full Width) -->
+        <div class="card full-width">
+            <div class="card-title">
+                <span class="card-icon">🚫</span>
+                Banned words
+            </div>
+
+            <form action="/setBannedWords" method="POST" id="bannedWordsForm">
+                <div id="bannedWordsContainer" class="banned-words-wrapper">
+                    {{ range .BannedWords }}
+                    <div class="word-input-group">
+                        <input type="text" name="word" value="{{ . }}" placeholder="Enter banned word">
+                        <button type="button" class="btn-remove">🗑️</button>
+                    </div>
+                    {{ end }}
+                </div>
+                <div class="button-group">
+                    <button type="button" id="addWordBtn" class="btn-add">Add</button>
+                    <button type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Send Message Card (Full Width) -->
+        <div class="card full-width">
+            <div class="card-title">
+                <span class="card-icon">💬</span>
+                Send message
+            </div>
+
+            <div class="message-section">
+                <!-- Message Form -->
+                <div>
+                    <form id="messageForm">
+                        <div class="input-group">
+                            <label class="input-label" for="customMessage">Message content</label>
+                            <textarea id="customMessage" name="customMessage" placeholder="Enter your message here..." required></textarea>
+                        </div>
+
+                        <div class="input-with-clear">
+                            <div>
+                                <label class="input-label" for="recipientId">Recipient ID</label>
+                                <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" placeholder="Chat ID" required>
+                            </div>
+                            <button type="button" class="btn-clear" onclick="document.getElementById('recipientId').value='{{ .GroupID }}'">🔄</button>
+                        </div>
+
+                        <div class="input-with-clear">
+                            <div>
+                                <label class="input-label" for="threadId">Thread ID (optional)</label>
+                                <input type="text" id="threadId" name="threadId" placeholder="Leave empty for non-threaded groups">
+                            </div>
+                            <button type="button" class="btn-clear" onclick="document.getElementById('threadId').value=''">🗑️</button>
+                        </div>
+
+                        <div class="input-with-clear">
+                            <div>
+                                <label class="input-label" for="replyToMessageId">Reply to message ID (optional)</label>
+                                <input type="text" id="replyToMessageId" name="replyToMessageId" placeholder="Leave empty for no reply">
+                            </div>
+                            <button type="button" class="btn-clear" onclick="document.getElementById('replyToMessageId').value=''">🗑️</button>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label" for="parseMode">Parse mode</label>
+                            <select id="parseMode" name="parseMode">
+                                <option value="">None (Plain Text)</option>
+                                <option value="Markdown">Markdown</option>
+                                <option value="MarkdownV2">MarkdownV2</option>
+                                <option value="HTML">HTML</option>
+                            </select>
+                        </div>
+
+                        <button type="button" id="customMessageButton" class="btn-secondary" style="width: 100%; margin-top: 10px;">Send</button>
+                    </form>
+                </div>
+
+                <!-- Message Cache -->
+                <div>
+                    <div class="message-cache-title">Recent messages</div>
+                    <div class="message-cache" id="messageCache">
+                        <div class="no-messages">Loading messages...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         const sendMessageUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/sendMessage"
@@ -93,40 +615,284 @@
             "text": "",
             "chat_id": "",
             "reply_to_message_id": "",
-            "parse_mode": "markdown",
             "disable_web_page_preview": "false",
             "disable_notification": "false",
         })
         const customMessageBox = document.getElementById("customMessage");
-        function handleToggle(toggleId, formId) {
-            document.getElementById(toggleId).addEventListener('change', () => {
-                document.getElementById(formId).submit();
+        const replyToMessageIdBox = document.getElementById("replyToMessageId");
+
+        // Handle toggles without page reload
+        function handleToggle(toggleId, endpoint) {
+            document.getElementById(toggleId).addEventListener('change', (e) => {
+                const params = new URLSearchParams();
+                params.append('toggle', e.target.checked ? 'on' : 'off');
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                }).catch(err => console.error('Error updating toggle:', err));
             });
         }
 
-        handleToggle('linkToggle', 'linkForm');
-        handleToggle('channelForwardToggle', 'channelForwardForm');
-        handleToggle('adminForwardToggle', 'adminForwardForm');
-        handleToggle('autoBanToggle', 'autoBanForm');
+        handleToggle('linkToggle', '/setLinks');
+        handleToggle('channelForwardToggle', '/setChannelForward');
+        handleToggle('adminForwardToggle', '/setAdminForward');
+        handleToggle('autoBanToggle', '/setAutoBan');
 
+        // Handle ID updates without page reload
+        function handleIdForm(formId, endpoint) {
+            document.getElementById(formId).addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const params = new URLSearchParams(formData);
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                }).then(() => {
+                    // Visual feedback
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    const originalText = btn.textContent;
+                    btn.textContent = '✓ Updated';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Error updating ID:', err);
+                    alert('Error updating value');
+                });
+            });
+        }
+
+        handleIdForm('channelForm', '/setChannel');
+        handleIdForm('groupForm', '/setGroup');
+        handleIdForm('adminForm', '/setAdmin');
+
+        // Handle banned words form without page reload
+        document.getElementById('bannedWordsForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            fetch('/setBannedWords', {
+                method: 'POST',
+                body: formData
+            }).then(() => {
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Saved';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Error updating banned words:', err);
+                alert('Error saving banned words');
+            });
+        });
+
+        // Banned words dynamic input management
+        const bannedWordsContainer = document.getElementById('bannedWordsContainer');
+        const addWordBtn = document.getElementById('addWordBtn');
+
+        function createWordInput(value = '') {
+            const div = document.createElement('div');
+            div.className = 'word-input-group';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'word';
+            input.value = value;
+            input.placeholder = 'Enter banned word';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-remove';
+            removeBtn.textContent = '🗑️';
+            removeBtn.addEventListener('click', () => {
+                div.remove();
+            });
+
+            div.appendChild(input);
+            div.appendChild(removeBtn);
+            return div;
+        }
+
+        addWordBtn.addEventListener('click', () => {
+            const newInput = createWordInput();
+            bannedWordsContainer.appendChild(newInput);
+        });
+
+        // Add remove functionality to existing inputs
+        document.querySelectorAll('.btn-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.target.parentElement.remove();
+            });
+        });
+
+        // Ensure at least one input exists
+        if (bannedWordsContainer.children.length === 0) {
+            bannedWordsContainer.appendChild(createWordInput('18+'));
+        }
+
+        // Send custom message
         document.getElementById("customMessageButton").addEventListener("click", (event) => {
             event.preventDefault()
             const value = customMessageBox.value;
+            const replyToMessageId = replyToMessageIdBox.value;
             const recipient = document.getElementById("recipientId").value;
+            const threadId = document.getElementById("threadId").value;
+            const parseMode = document.getElementById("parseMode").value;
+
+            if (!value || !recipient) {
+                alert('Please fill in required fields');
+                return;
+            }
 
             messageParams.set("text", value);
             messageParams.set("chat_id", recipient);
-            
+            messageParams.set("reply_to_message_id", replyToMessageId || "");
+
+            // Add parse_mode if selected
+            if (parseMode) {
+                messageParams.set("parse_mode", parseMode);
+            } else {
+                messageParams.delete("parse_mode");
+            }
+
+            // Add thread_id if provided (for topics/forums)
+            if (threadId) {
+                messageParams.set("message_thread_id", threadId);
+            } else {
+                messageParams.delete("message_thread_id");
+            }
+
             const request_url = sendMessageUrl + "?" + messageParams;
             console.log(request_url);
+
             fetch(request_url).then((response) => {
                 response.json().then((data) => {
                     console.log(data);
-                    if (data.ok) customMessageBox.value = "";
-                    else alert(data.description);
+                    if (data.ok) {
+                        customMessageBox.value = "";
+                        replyToMessageIdBox.value = "";
+                        //alert('✅ Message sent successfully!');
+                    } else {
+                        alert('❌ Error: ' + data.description);
+                    }
                 })
+            }).catch(err => {
+                alert('❌ Network error: ' + err.message);
             })
         })
+
+        // WebSocket connection for real-time messages
+        let ws;
+        let messageCache = [];
+        const MAX_CACHE_SIZE = 100; // Must match MaxCacheSize in backend
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                // Load initial cache
+                loadInitialCache();
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                addMessageToCache(msg);
+                renderMessages();
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting in 3s...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        function loadInitialCache() {
+            fetch('/api/messageCache')
+                .then(response => response.json())
+                .then(messages => {
+                    messageCache = messages;
+                    renderMessages();
+                })
+                .catch(err => {
+                    console.error('Error loading initial cache:', err);
+                    document.getElementById('messageCache').innerHTML =
+                        '<div class="no-messages">Error loading messages</div>';
+                });
+        }
+
+        function addMessageToCache(msg) {
+            messageCache.unshift(msg); // Add to beginning (newest first)
+
+            // Maintain max cache size
+            if (messageCache.length > MAX_CACHE_SIZE) {
+                messageCache.pop(); // Remove oldest
+            }
+        }
+
+        function renderMessages() {
+            const cacheContainer = document.getElementById('messageCache');
+
+            if (messageCache.length === 0) {
+                cacheContainer.innerHTML = '<div class="no-messages">No messages in cache yet</div>';
+                return;
+            }
+
+            cacheContainer.innerHTML = messageCache.map(msg => {
+                const userName = msg.from_first_name || msg.from_username || 'Unknown';
+                const hasThread = msg.is_topic_message && msg.thread_id;
+
+                return `
+                    <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
+                        <div class="cached-message-header">
+                            <span class="cached-message-user">${userName}</span>
+                            <span class="cached-message-id">#${msg.message_id}</span>
+                        </div>
+                        <div class="cached-message-text">${msg.text || '<empty message>'}</div>
+                        ${hasThread ? `<span class="cached-message-badge">Thread: ${msg.thread_id}</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select a message from cache and fill form fields
+        function selectMessage(msg) {
+            document.getElementById('recipientId').value = msg.chat_id;
+            document.getElementById('replyToMessageId').value = msg.message_id;
+
+            if (msg.is_topic_message && msg.thread_id) {
+                document.getElementById('threadId').value = msg.thread_id;
+            } else {
+                document.getElementById('threadId').value = '';
+            }
+
+            // Visual feedback
+            const btn = document.getElementById('customMessageButton');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Message selected';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 1500);
+        }
+
+        // Connect WebSocket on page load
+        connectWebSocket();
     </script>
 </body>
 </html>

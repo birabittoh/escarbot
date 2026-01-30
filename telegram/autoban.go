@@ -103,10 +103,14 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	defer escarbot.CacheMutex.Unlock()
 
 	cached := CachedMessage{
-		MessageID: message.MessageID,
-		From:      message.From,
-		Text:      message.Text,
-		Entities:  message.Entities,
+		MessageID:      message.MessageID,
+		ChatID:         message.Chat.ID,
+		FromUsername:   message.From.UserName,
+		FromFirstName:  message.From.FirstName,
+		Text:           message.Text,
+		Entities:       message.Entities,
+		ThreadID:       message.MessageThreadID,
+		IsTopicMessage: message.IsTopicMessage,
 	}
 
 	cache := escarbot.MessageCache[message.Chat.ID]
@@ -118,6 +122,11 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	}
 
 	escarbot.MessageCache[message.Chat.ID] = cache
+
+	// Broadcast message if callback is set
+	if escarbot.OnMessageCached != nil {
+		escarbot.OnMessageCached(cached)
+	}
 }
 
 // findAndDeleteWelcomeMessage searches and deletes the welcome message from another bot
@@ -133,10 +142,8 @@ func findAndDeleteWelcomeMessage(escarbot *EscarBot, chatID int64, userID int64,
 	for i := len(cache) - 1; i >= 0; i-- {
 		msg := cache[i]
 
-		// Skip if not a bot or if it's our bot
-		if msg.From == nil || !msg.From.IsBot || msg.From.ID == escarbot.Bot.Self.ID {
-			continue
-		}
+		// We can't reliably determine if sender is a bot from cache anymore
+		// So we check all messages and look for user mentions
 
 		// Check if message contains the nickname or user ID
 		if containsUser(msg, userID, userName) {

@@ -11,27 +11,32 @@ import (
 )
 
 type EscarBot struct {
-	Bot            *tgbotapi.BotAPI
-	Power          bool
-	LinkDetection  bool
-	ChannelForward bool
-	AdminForward   bool
-	AutoBan        bool
-	ChannelID      int64
-	GroupID        int64
-	AdminID        int64
-	BannedWords    []string
-	MessageCache   map[int64][]CachedMessage
-	CacheMutex     sync.Mutex
-	MaxCacheSize   int
+	Bot             *tgbotapi.BotAPI
+	Power           bool
+	LinkDetection   bool
+	ChannelForward  bool
+	AdminForward    bool
+	AutoBan         bool
+	ChannelID       int64
+	GroupID         int64
+	AdminID         int64
+	BannedWords     []string
+	MessageCache    map[int64][]CachedMessage
+	CacheMutex      sync.Mutex
+	MaxCacheSize    int
+	OnMessageCached func(CachedMessage) // Callback for when a message is cached
 }
 
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
-	MessageID int
-	From      *tgbotapi.User
-	Text      string
-	Entities  []tgbotapi.MessageEntity
+	MessageID      int                      `json:"message_id"`
+	ChatID         int64                    `json:"chat_id"`
+	FromUsername   string                   `json:"from_username"`
+	FromFirstName  string                   `json:"from_first_name"`
+	Text           string                   `json:"text"`
+	Entities       []tgbotapi.MessageEntity `json:"entities,omitempty"`
+	ThreadID       int                      `json:"thread_id,omitempty"`
+	IsTopicMessage bool                     `json:"is_topic_message"`
 }
 
 func NewBot(botToken string, channelId string, groupId string, adminId string) *EscarBot {
@@ -75,20 +80,35 @@ func NewBot(botToken string, channelId string, groupId string, adminId string) *
 		log.Printf("Using default banned words: %v", bannedWords)
 	}
 
+	// Read boolean settings from environment (default to true if not set)
+	linkDetection := getBoolEnv("LINK_DETECTION", true)
+	channelForward := getBoolEnv("CHANNEL_FORWARD", true)
+	adminForward := getBoolEnv("ADMIN_FORWARD", true)
+	autoBan := getBoolEnv("AUTO_BAN", true)
+
 	return &EscarBot{
 		Bot:            bot,
 		Power:          true,
-		LinkDetection:  true,
-		ChannelForward: true,
-		AdminForward:   true,
-		AutoBan:        true,
+		LinkDetection:  linkDetection,
+		ChannelForward: channelForward,
+		AdminForward:   adminForward,
+		AutoBan:        autoBan,
 		ChannelID:      channelIdInt,
 		GroupID:        groupIdInt,
 		AdminID:        adminIdInt,
 		BannedWords:    bannedWords,
 		MessageCache:   make(map[int64][]CachedMessage),
-		MaxCacheSize:   15,
+		MaxCacheSize:   100,
 	}
+}
+
+// getBoolEnv reads a boolean environment variable with a default value
+func getBoolEnv(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value == "true" || value == "1"
 }
 
 func BotPoll(escarbot *EscarBot) {
@@ -101,8 +121,9 @@ func BotPoll(escarbot *EscarBot) {
 	for update := range updates {
 		msg := update.Message
 		if msg != nil { // If we got a message
+			addMessageToCache(escarbot, msg)
+
 			if escarbot.AutoBan {
-				addMessageToCache(escarbot, msg)
 				handleNewChatMembers(escarbot, msg)
 			}
 			if escarbot.LinkDetection {
