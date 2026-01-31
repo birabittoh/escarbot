@@ -148,7 +148,7 @@ func banUser(escarbot *EscarBot, chat tgbotapi.Chat, user tgbotapi.User) {
 	msgText.WriteString(fmt.Sprintf("<b>User</b>: <a href=\"tg://user?id=%d\">%s</a> [<code>%d</code>]\n", user.ID, user.FirstName, user.ID))
 	msgText.WriteString("#id" + strconv.FormatInt(user.ID, 10))
 
-	logMsg := tgbotapi.NewMessage(chat.ID, msgText.String())
+	logMsg := tgbotapi.NewMessage(escarbot.LogChannelID, msgText.String())
 	logMsg.ParseMode = "HTML"
 	logMsg.LinkPreviewOptions.IsDisabled = true
 	_, err = escarbot.Bot.Send(logMsg)
