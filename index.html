@@ -490,10 +490,9 @@
 
                 <div class="feature-item" id="feature-links" onclick="showSettings('links')">
                     <div class="feature-info">
-                        <span class="feature-name">Link Detection</span>
+                        <span class="feature-name">Link detection</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
-                        <button class="btn-icon" onclick="showSettings('links')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="linkToggle" onchange="toggleFeature('linkToggle', '/setLinks')"{{ if .LinkDetection }} checked{{ end }}>
                             <span class="slider"></span>
@@ -503,10 +502,9 @@
 
                 <div class="feature-item" id="feature-channel" onclick="showSettings('channel')">
                     <div class="feature-info">
-                        <span class="feature-name">Channel Forward</span>
+                        <span class="feature-name">Channel forward</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
-                        <button class="btn-icon" onclick="showSettings('channel')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="channelForwardToggle" onchange="toggleFeature('channelForwardToggle', '/setChannelForward')"{{ if .ChannelForward }} checked{{ end }}>
                             <span class="slider"></span>
@@ -516,10 +514,9 @@
 
                 <div class="feature-item" id="feature-admin" onclick="showSettings('admin')">
                     <div class="feature-info">
-                        <span class="feature-name">Admin Forward</span>
+                        <span class="feature-name">Admin forward</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
-                        <button class="btn-icon" onclick="showSettings('admin')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="adminForwardToggle" onchange="toggleFeature('adminForwardToggle', '/setAdminForward')"{{ if .AdminForward }} checked{{ end }}>
                             <span class="slider"></span>
@@ -529,10 +526,9 @@
 
                 <div class="feature-item" id="feature-autoban" onclick="showSettings('autoban')">
                     <div class="feature-info">
-                        <span class="feature-name">Auto-Ban</span>
+                        <span class="feature-name">Auto-ban</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
-                        <button class="btn-icon" onclick="showSettings('autoban')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="autoBanToggle" onchange="toggleFeature('autoBanToggle', '/setAutoBan')"{{ if .AutoBan }} checked{{ end }}>
                             <span class="slider"></span>
@@ -542,10 +538,9 @@
 
                 <div class="feature-item" id="feature-welcome" onclick="showSettings('welcome')">
                     <div class="feature-info">
-                        <span class="feature-name">Welcome Message</span>
+                        <span class="feature-name">Welcome message</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
-                        <button class="btn-icon" onclick="showSettings('welcome')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="welcomeMessageToggle" onchange="toggleFeature('welcomeMessageToggle', '/setWelcomeMessage')"{{ if .WelcomeMessage }} checked{{ end }}>
                             <span class="slider"></span>
@@ -564,7 +559,7 @@
 
                 <!-- Link Detection Settings -->
                 <div class="settings-panel" id="settings-links">
-                    <div class="card-title">Link Detection Settings</div>
+                    <div class="card-title">Link detection settings</div>
                     <p style="margin-bottom: 20px; color: #9ca3af;">Enable or disable individual link transformers.</p>
                     <div class="replacer-grid">
                         {{ range .AllReplacers }}
@@ -583,7 +578,7 @@
 
                 <!-- Channel Forward Settings -->
                 <div class="settings-panel" id="settings-channel">
-                    <div class="card-title">Channel Forward Settings</div>
+                    <div class="card-title">Channel forward settings</div>
                     <form onsubmit="updateId(event, '/setChannel', 'channelId')">
                         <div class="input-group">
                             <label class="input-label" for="channelId">Channel ID</label>
@@ -606,7 +601,7 @@
 
                 <!-- Admin Forward Settings -->
                 <div class="settings-panel" id="settings-admin">
-                    <div class="card-title">Admin Forward Settings</div>
+                    <div class="card-title">Admin forward settings</div>
                     <form onsubmit="updateId(event, '/setAdmin', 'adminId')">
                         <div class="input-group">
                             <label class="input-label" for="adminId">Admin ID</label>
@@ -620,9 +615,9 @@
 
                 <!-- Auto Ban Settings -->
                 <div class="settings-panel" id="settings-autoban">
-                    <div class="card-title">Auto-Ban Settings</div>
+                    <div class="card-title">Auto-ban settings</div>
                     <form id="bannedWordsForm">
-                        <label class="input-label">Banned Words</label>
+                        <label class="input-label">Banned words</label>
                         <div id="bannedWordsContainer">
                             {{ range .BannedWords }}
                             <div class="word-input-group">
@@ -632,21 +627,21 @@
                             {{ end }}
                         </div>
                         <div class="button-group">
-                            <button type="button" class="btn-add" onclick="addBannedWord()">Add Word</button>
-                            <button type="submit">Save All</button>
+                            <button type="button" class="btn-add" onclick="addBannedWord()">Add</button>
+                            <button type="submit">Save</button>
                         </div>
                     </form>
                 </div>
 
                 <!-- Welcome Message Settings -->
                 <div class="settings-panel" id="settings-welcome">
-                    <div class="card-title">Welcome Message Settings</div>
+                    <div class="card-title">Welcome message settings</div>
                     <div class="placeholder-info">
                         <strong>Placeholders:</strong> <code>{USER_NAME}</code>, <code>{USER_ID}</code>, <code>{GROUP_ID}</code>
                     </div>
                     <form id="welcomeSettingsForm">
                         <div class="input-group">
-                            <label class="input-label" for="welcomeText">Message Text (Markdown)</label>
+                            <label class="input-label" for="welcomeText">Message text (Markdown)</label>
                             <textarea id="welcomeText" name="welcomeText" placeholder="Enter welcome message...">{{ .WelcomeText }}</textarea>
                         </div>
                         <div class="input-group">
@@ -654,9 +649,9 @@
                             <input type="text" id="welcomePhoto" name="welcomePhoto" value="{{ .WelcomePhoto }}" placeholder="https://example.com/image.jpg">
                         </div>
                         <div class="input-group">
-                            <label class="input-label">Button Links</label>
+                            <label class="input-label">Button links</label>
                             <div id="welcomeLinksContainer"></div>
-                            <button type="button" class="btn-add" onclick="addWelcomeLink()" style="margin-top: 10px;">Add Link</button>
+                            <button type="button" class="btn-add" onclick="addWelcomeLink()" style="margin-top: 10px;">Add</button>
                         </div>
                         <div class="button-group">
                             <button type="submit">Save</button>
@@ -670,13 +665,13 @@
         <div class="card" style="margin-bottom: 30px;">
             <div class="card-title">
                 <span class="card-icon">💬</span>
-                Send Message
+                Send message
             </div>
 
             <div class="message-section">
                 <form id="messageForm">
                     <div class="input-group">
-                        <label class="input-label" for="customMessage">Message Content</label>
+                        <label class="input-label" for="customMessage">Message content</label>
                         <textarea id="customMessage" name="customMessage" placeholder="Enter your message here..." required></textarea>
                     </div>
 
@@ -686,9 +681,9 @@
                             <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
                         </div>
                         <div class="input-group">
-                            <label class="input-label" for="parseMode">Parse Mode</label>
+                            <label class="input-label" for="parseMode">Parse mode</label>
                             <select id="parseMode" name="parseMode">
-                                <option value="">Plain Text</option>
+                                <option value="">Plaintext</option>
                                 <option value="Markdown">Markdown</option>
                                 <option value="MarkdownV2">MarkdownV2</option>
                                 <option value="HTML">HTML</option>
@@ -707,11 +702,11 @@
                         </div>
                     </div>
 
-                    <button type="button" id="customMessageButton" class="btn-secondary" style="width: 100%;">Send Message</button>
+                    <button type="button" id="customMessageButton" class="btn-secondary" style="width: 100%;">Send</button>
                 </form>
 
                 <div>
-                    <label class="input-label">Recent Messages</label>
+                    <label class="input-label">Recent messages</label>
                     <div class="message-cache" id="messageCache">
                         <div class="no-messages" style="text-align: center; padding: 20px; color: #6b7280;">Loading messages...</div>
                     </div>
@@ -723,7 +718,7 @@
     <!-- Reaction Picker Modal -->
     <div class="reaction-picker-overlay" id="reactionOverlay" onclick="closeReactionPicker()"></div>
     <div class="reaction-picker" id="reactionPicker">
-        <div class="card-title" style="justify-content: center;">Select Reaction</div>
+        <div class="card-title" style="justify-content: center;">Select reaction</div>
         <div class="reaction-picker-grid" id="reactionGrid"></div>
     </div>
 
