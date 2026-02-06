@@ -50,6 +50,10 @@ var replacers = []Replacer{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
 		Format: "https://vm.kktiktok.com/%s/",
 	},
+	{
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www|old)\.)?reddit\.com\/((?:r|u|user)\/[^\?\s]+)`),
+		Format: "https://rxddit.com/%s",
+	},
 }
 
 func isInSpoiler(entities []tgbotapi.MessageEntity, offset, length int) bool {
