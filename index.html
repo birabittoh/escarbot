@@ -658,7 +658,7 @@
                             <button type="button" class="btn-add" onclick="addWelcomeLink()" style="margin-top: 10px;">Add Link</button>
                         </div>
                         <div class="button-group">
-                            <button type="submit">Save Welcome Settings</button>
+                            <button type="submit">Save</button>
                         </div>
                     </form>
                 </div>
@@ -876,25 +876,39 @@
             params.append('welcomePhoto', document.getElementById('welcomePhoto').value);
             params.append('welcomeLinks', linksStr);
 
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+
             fetch('/setWelcomeContent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params
             }).then(() => {
                 welcomeLinksData = linksStr;
-                alert('Welcome settings saved!');
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 2000);
             });
         });
 
         // --- Messaging ---
-        document.getElementById("customMessageButton").addEventListener("click", () => {
+        document.getElementById("customMessageButton").addEventListener("click", (e) => {
+            const btn = e.target;
+            const originalText = btn.textContent;
             const text = document.getElementById("customMessage").value;
             const chat_id = document.getElementById("recipientId").value;
             const reply_to = document.getElementById("replyToMessageId").value;
             const thread_id = document.getElementById("threadId").value;
             const parse_mode = document.getElementById("parseMode").value;
 
-            if(!text || !chat_id) return alert('Message and Recipient are required');
+            if(!text || !chat_id) {
+                btn.textContent = 'Required fields missing!';
+                btn.style.background = '#ef4444';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+                return;
+            }
 
             const params = new URLSearchParams({ text, chat_id });
             if(reply_to) params.append('reply_to_message_id', reply_to);
@@ -906,9 +920,17 @@
                 .then(data => {
                     if(data.ok) {
                         document.getElementById("customMessage").value = "";
+                        btn.textContent = 'Sent!';
+                        btn.style.background = '#10b981';
                     } else {
-                        alert('Error: ' + data.description);
+                        btn.textContent = 'Error!';
+                        btn.style.background = '#ef4444';
+                        console.error('Telegram Error:', data.description);
                     }
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 2000);
                 });
         });
 
