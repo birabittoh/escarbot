@@ -100,6 +100,7 @@
             margin-bottom: 12px;
             transition: all 0.2s ease;
             border: 1px solid transparent;
+            cursor: pointer;
         }
 
         .feature-item:hover {
@@ -487,11 +488,11 @@
                     Features
                 </div>
 
-                <div class="feature-item" id="feature-links">
+                <div class="feature-item" id="feature-links" onclick="showSettings('links')">
                     <div class="feature-info">
                         <span class="feature-name">Link Detection</span>
                     </div>
-                    <div class="feature-actions">
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="showSettings('links')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="linkToggle" onchange="toggleFeature('linkToggle', '/setLinks')"{{ if .LinkDetection }} checked{{ end }}>
@@ -500,11 +501,11 @@
                     </div>
                 </div>
 
-                <div class="feature-item" id="feature-channel">
+                <div class="feature-item" id="feature-channel" onclick="showSettings('channel')">
                     <div class="feature-info">
                         <span class="feature-name">Channel Forward</span>
                     </div>
-                    <div class="feature-actions">
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="showSettings('channel')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="channelForwardToggle" onchange="toggleFeature('channelForwardToggle', '/setChannelForward')"{{ if .ChannelForward }} checked{{ end }}>
@@ -513,11 +514,11 @@
                     </div>
                 </div>
 
-                <div class="feature-item" id="feature-admin">
+                <div class="feature-item" id="feature-admin" onclick="showSettings('admin')">
                     <div class="feature-info">
                         <span class="feature-name">Admin Forward</span>
                     </div>
-                    <div class="feature-actions">
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="showSettings('admin')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="adminForwardToggle" onchange="toggleFeature('adminForwardToggle', '/setAdminForward')"{{ if .AdminForward }} checked{{ end }}>
@@ -526,11 +527,11 @@
                     </div>
                 </div>
 
-                <div class="feature-item" id="feature-autoban">
+                <div class="feature-item" id="feature-autoban" onclick="showSettings('autoban')">
                     <div class="feature-info">
                         <span class="feature-name">Auto-Ban</span>
                     </div>
-                    <div class="feature-actions">
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="showSettings('autoban')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="autoBanToggle" onchange="toggleFeature('autoBanToggle', '/setAutoBan')"{{ if .AutoBan }} checked{{ end }}>
@@ -539,11 +540,11 @@
                     </div>
                 </div>
 
-                <div class="feature-item" id="feature-welcome">
+                <div class="feature-item" id="feature-welcome" onclick="showSettings('welcome')">
                     <div class="feature-info">
                         <span class="feature-name">Welcome Message</span>
                     </div>
-                    <div class="feature-actions">
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <button class="btn-icon" onclick="showSettings('welcome')" title="Edit Settings">⚙️</button>
                         <label class="switch">
                             <input type="checkbox" id="welcomeMessageToggle" onchange="toggleFeature('welcomeMessageToggle', '/setWelcomeMessage')"{{ if .WelcomeMessage }} checked{{ end }}>
@@ -558,7 +559,7 @@
                 <div class="empty-selection" id="empty-settings">
                     <div class="empty-selection-icon">🛠️</div>
                     <h2>Select a feature to configure</h2>
-                    <p>Click the gear icon next to a feature to see its settings.</p>
+                    <p>Click a feature to see its settings.</p>
                 </div>
 
                 <!-- Link Detection Settings -->
@@ -567,7 +568,7 @@
                     <p style="margin-bottom: 20px; color: #9ca3af;">Enable or disable individual link transformers.</p>
                     <div class="replacer-grid">
                         {{ range .AllReplacers }}
-                        <div class="replacer-item">
+                        <div class="replacer-item" title="{{ .Regex.String }}">
                             <span style="font-size: 0.9rem;">{{ .Name }}</span>
                             <label class="switch">
                                 <input type="checkbox" class="replacer-toggle" data-name="{{ .Name }}"
@@ -1024,6 +1025,8 @@
             });
         }
 
+        // Initialize
+        showSettings('links');
         connectWebSocket();
     </script>
 </body>
