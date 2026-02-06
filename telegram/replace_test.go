@@ -45,6 +45,18 @@ func TestParseText(t *testing.T) {
 			url:  "https://www.reddit.com/user/someuser",
 			want: []string{"https://rxddit.com/user/someuser"},
 		},
+		{
+			name: "Bluesky post link",
+			text: "Bluesky post: https://bsky.app/profile/coldunwanted.net/post/3lc5qjx2n2c27",
+			url:  "https://bsky.app/profile/coldunwanted.net/post/3lc5qjx2n2c27",
+			want: []string{"https://xbsky.app/profile/coldunwanted.net/post/3lc5qjx2n2c27"},
+		},
+		{
+			name: "Bluesky profile link",
+			text: "Bluesky profile: https://bsky.app/profile/coldunwanted.net",
+			url:  "https://bsky.app/profile/coldunwanted.net",
+			want: []string{"https://xbsky.app/profile/coldunwanted.net"},
+		},
 	}
 
 	for _, tt := range tests {

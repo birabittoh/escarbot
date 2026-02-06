@@ -35,8 +35,8 @@ var replacers = []Replacer{
 		Format: "https://fixupx.com/%s/status/%s",
 	},
 	{
-		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?bsky\.app\/profile\/([^\/\s]+)\/post\/([^\/\s]+)`),
-		Format: "https://fxbsky.app/profile/%s/post/%s",
+		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?bsky\.app\/(profile\/[^\?\s]+)`),
+		Format: "https://xbsky.app/%s",
 	},
 	{
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(?:reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
