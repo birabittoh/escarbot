@@ -68,7 +68,10 @@ func TestParseText(t *testing.T) {
 			entities := []tgbotapi.MessageEntity{
 				{Type: "url", Offset: offset, Length: len(tt.url)},
 			}
-			if got := parseText(tt.text, entities); !reflect.DeepEqual(got, tt.want) {
+			bot := &EscarBot{
+				EnabledReplacers: make(map[string]bool),
+			}
+			if got := parseText(bot, tt.text, entities); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseText() = %v, want %v", got, tt.want)
 			}
 		})

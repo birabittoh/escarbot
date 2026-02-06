@@ -28,11 +28,13 @@ type EscarBot struct {
 	AvailableReactions map[int64][]string
 	MessageCache       []CachedMessage
 	CacheMutex         sync.Mutex
+	StateMutex         sync.RWMutex
 	MaxCacheSize       int
 	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
 	WelcomeText        string
 	WelcomeLinks       string
 	WelcomePhoto       string
+	EnabledReplacers   map[string]bool
 }
 
 // CachedMessage represents a message stored in cache
@@ -96,12 +98,14 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 func NewBot(botToken string, channelId string, groupId string, adminId, logChannelId string) *EscarBot {
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Panic(err)
+		log.Printf("Warning: failed to initialize bot with token: %v", err)
+		// For testing/development, create a mock bot if token is dummy or invalid
+		bot = &tgbotapi.BotAPI{Self: tgbotapi.User{UserName: "OfflineBot"}}
+	} else {
+		log.Printf("Authorized on account %s", bot.Self.UserName)
 	}
 
 	//bot.Debug = true
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	channelIdInt, err := strconv.ParseInt(channelId, 10, 64)
 	if err != nil {
@@ -146,6 +150,13 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	autoBan := getBoolEnv("AUTO_BAN", true)
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
+	// Initialize enabled replacers
+	enabledReplacers := make(map[string]bool)
+	for _, replacer := range GetReplacers() {
+		envKey := "REPLACER_" + strings.ReplaceAll(strings.ToUpper(replacer.Name), " ", "_") + "_ENABLED"
+		enabledReplacers[replacer.Name] = getBoolEnv(envKey, true)
+	}
+
 	// Get available reactions for the group
 	availableReactionsMap := make(map[int64][]string)
 
@@ -168,6 +179,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		WelcomeText:        os.Getenv("WELCOME_TEXT"),
 		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
 		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
+		EnabledReplacers:   enabledReplacers,
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
@@ -185,6 +197,10 @@ func getBoolEnv(key string, defaultValue bool) bool {
 }
 
 func BotPoll(escarbot *EscarBot) {
+	if escarbot.Bot.Token == "" || escarbot.Bot.Self.UserName == "OfflineBot" {
+		log.Println("Offline mode or invalid token, skipping BotPoll")
+		return
+	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -192,21 +208,27 @@ func BotPoll(escarbot *EscarBot) {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
+		escarbot.StateMutex.RLock()
+		linkDetection := escarbot.LinkDetection
+		adminForward := escarbot.AdminForward
+		channelForward := escarbot.ChannelForward
+		escarbot.StateMutex.RUnlock()
+
 		msg := update.Message
 		if msg != nil { // If we got a message
 			addMessageToCache(escarbot, msg)
 
 			handleNewChatMembers(escarbot, msg)
 
-			if escarbot.LinkDetection {
-				handleLinks(bot, msg)
+			if linkDetection {
+				handleLinks(escarbot, msg)
 			}
-			if escarbot.AdminForward {
+			if adminForward {
 				forwardToAdmin(escarbot, msg)
 			}
 		}
 		if update.ChannelPost != nil { // If we got a channel post
-			if escarbot.ChannelForward {
+			if channelForward {
 				channelPostHandler(escarbot, update.ChannelPost)
 			}
 		}
