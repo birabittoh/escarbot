@@ -10,7 +10,11 @@ import (
 )
 
 func replacePlaceholders(escarbot *EscarBot, text string, user tgbotapi.User) string {
-	replaced := strings.ReplaceAll(text, "{GROUP_ID}", strconv.FormatInt(escarbot.GroupID, 10))
+	escarbot.StateMutex.RLock()
+	groupID := escarbot.GroupID
+	escarbot.StateMutex.RUnlock()
+
+	replaced := strings.ReplaceAll(text, "{GROUP_ID}", strconv.FormatInt(groupID, 10))
 	replaced = strings.ReplaceAll(replaced, "{USER_NAME}", user.FirstName)
 	replaced = strings.ReplaceAll(replaced, "{USER_ID}", strconv.FormatInt(user.ID, 10))
 	return replaced
@@ -28,8 +32,16 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 			continue
 		}
 
+		escarbot.StateMutex.RLock()
+		autoBan := escarbot.AutoBan
+		welcomeMessage := escarbot.WelcomeMessage
+		welcomeLinks := escarbot.WelcomeLinks
+		welcomePhoto := escarbot.WelcomePhoto
+		welcomeText := escarbot.WelcomeText
+		escarbot.StateMutex.RUnlock()
+
 		// Check user's personal channel
-		if escarbot.AutoBan && hasBannedContent(escarbot, user.ID) {
+		if autoBan && hasBannedContent(escarbot, user.ID) {
 			log.Printf("User %d (%s) has banned content in personal channel, proceeding with ban", user.ID, user.UserName)
 
 			// Ban user and revoke all their messages
@@ -47,12 +59,12 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 			continue
 		}
 
-		if !escarbot.WelcomeMessage {
+		if !welcomeMessage {
 			continue
 		}
 
 		// Send welcome message
-		links := strings.Split(escarbot.WelcomeLinks, "\n")
+		links := strings.Split(welcomeLinks, "\n")
 		var buttons [][]tgbotapi.InlineKeyboardButton
 		for _, line := range links {
 			parts := strings.SplitN(line, "|", 2)
@@ -66,16 +78,16 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 		}
 
 		var welcomeMsg tgbotapi.Chattable
-		if escarbot.WelcomePhoto == "" {
-			msg := tgbotapi.NewMessage(message.Chat.ID, replacePlaceholders(escarbot, escarbot.WelcomeText, user))
+		if welcomePhoto == "" {
+			msg := tgbotapi.NewMessage(message.Chat.ID, replacePlaceholders(escarbot, welcomeText, user))
 			msg.ParseMode = "Markdown"
 			if len(buttons) > 0 {
 				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 			}
 			welcomeMsg = msg
-		} else if escarbot.WelcomeText != "" {
-			photo := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileURL(escarbot.WelcomePhoto))
-			photo.Caption = replacePlaceholders(escarbot, escarbot.WelcomeText, user)
+		} else if welcomeText != "" {
+			photo := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileURL(welcomePhoto))
+			photo.Caption = replacePlaceholders(escarbot, welcomeText, user)
 			photo.ParseMode = "Markdown"
 			if len(buttons) > 0 {
 				photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
@@ -112,8 +124,13 @@ func hasBannedContent(escarbot *EscarBot, userID int64) bool {
 	if chat.PersonalChat != nil {
 		channelName := strings.ToLower(chat.PersonalChat.Title)
 
+		escarbot.StateMutex.RLock()
+		bannedWords := make([]string, len(escarbot.BannedWords))
+		copy(bannedWords, escarbot.BannedWords)
+		escarbot.StateMutex.RUnlock()
+
 		// Check for banned words
-		for _, word := range escarbot.BannedWords {
+		for _, word := range bannedWords {
 			if strings.Contains(channelName, strings.ToLower(word)) {
 				log.Printf("Found banned word '%s' in personal channel: %s", word, chat.PersonalChat.Title)
 				return true
@@ -143,12 +160,16 @@ func banUser(escarbot *EscarBot, chat tgbotapi.Chat, user tgbotapi.User) {
 		log.Printf("User %d banned successfully", user.ID)
 	}
 
+	escarbot.StateMutex.RLock()
+	logChannelID := escarbot.LogChannelID
+	escarbot.StateMutex.RUnlock()
+
 	msgText := strings.Builder{}
 	msgText.WriteString("🚷 #BAN\n")
 	msgText.WriteString(fmt.Sprintf("<b>User</b>: <a href=\"tg://user?id=%d\">%s</a> [<code>%d</code>]\n", user.ID, user.FirstName, user.ID))
 	msgText.WriteString("#id" + strconv.FormatInt(user.ID, 10))
 
-	logMsg := tgbotapi.NewMessage(escarbot.LogChannelID, msgText.String())
+	logMsg := tgbotapi.NewMessage(logChannelID, msgText.String())
 	logMsg.ParseMode = "HTML"
 	logMsg.LinkPreviewOptions.IsDisabled = true
 	_, err = escarbot.Bot.Send(logMsg)

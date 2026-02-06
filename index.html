@@ -22,23 +22,23 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 50px;
-            padding: 40px 20px;
+            margin-bottom: 30px;
+            padding: 30px 20px;
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(139, 92, 246, 0.3);
         }
 
         h1 {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -46,16 +46,23 @@
         }
 
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #e0e7ff;
             opacity: 0.9;
         }
 
-        .grid {
+        .main-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: 1fr 3fr;
             gap: 25px;
             margin-bottom: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 992px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
         }
 
         .card {
@@ -64,20 +71,14 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             padding: 25px;
-            transition: all 0.3s ease;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
-            border-color: rgba(139, 92, 246, 0.3);
+            height: 100%;
         }
 
         .card-title {
             font-size: 1.3rem;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             color: #a78bfa;
             display: flex;
             align-items: center;
@@ -88,42 +89,74 @@
             font-size: 1.5rem;
         }
 
-        .toggle-container {
+        /* Feature List Styles */
+        .feature-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 15px;
+            padding: 12px;
             background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            transition: background 0.2s ease;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            cursor: pointer;
         }
 
-        .toggle-container:hover {
+        .feature-item:hover {
             background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(139, 92, 246, 0.2);
         }
 
-        .toggle-label {
-            font-size: 0.95rem;
-            color: #d1d5db;
+        .feature-item.active {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+
+        .feature-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
             flex: 1;
         }
 
-        .toggle-label-clickable {
-            cursor: pointer;
-            transition: color 0.2s ease;
+        .feature-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e4e4e7;
         }
 
-        .toggle-label-clickable:hover {
+        .feature-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e4e4e7;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
             color: #a78bfa;
         }
 
-        /* Custom Toggle Switch */
+        /* Toggle Switch */
         .switch {
             position: relative;
             display: inline-block;
-            width: 50px;
-            height: 26px;
+            width: 44px;
+            height: 22px;
         }
 
         .switch input {
@@ -147,10 +180,10 @@
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
             background-color: white;
             transition: .3s;
             border-radius: 50%;
@@ -161,26 +194,26 @@
         }
 
         input:checked + .slider:before {
-            transform: translateX(24px);
+            transform: translateX(22px);
+        }
+
+        /* Settings Area Styles */
+        .settings-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .input-group {
             margin-bottom: 20px;
-        }
-
-        .input-with-button {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        .input-with-button > div {
-            flex: 1;
-        }
-
-        .input-with-button button {
-            flex-shrink: 0;
-            white-space: nowrap;
         }
 
         .input-label {
@@ -210,20 +243,6 @@
             box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
         }
 
-        select {
-            cursor: pointer;
-        }
-
-        select option {
-            background: #1a1625;
-            color: #e4e4e7;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
         button {
             padding: 12px 24px;
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
@@ -242,49 +261,19 @@
             box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
         }
 
-        button:active {
-            transform: translateY(0);
-        }
-
-        .word-input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 12px;
-            align-items: center;
-        }
-
-        .word-input-group input {
-            flex: 1;
+        .btn-add {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
 
         .btn-remove {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             padding: 10px 18px;
-            min-width: 44px;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-remove:hover {
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-add {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            margin-right: 10px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-add:hover {
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
         .btn-secondary {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-secondary:hover {
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
 
         .button-group {
@@ -294,51 +283,43 @@
             justify-content: flex-end;
         }
 
-        .full-width {
-            grid-column: 1 / -1;
-            margin-bottom: 30px;
+        .replacer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
         }
 
-        #bannedWordsContainer {
-            margin-bottom: 20px;
+        .replacer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .banned-words-wrapper {
-            margin-bottom: 25px;
+        .word-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
         }
 
+        .word-input-group input {
+            flex: 1;
+        }
+
+        /* Message Section Styles */
         .message-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 25px;
         }
 
-        .input-with-clear {
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-        }
-
-        .input-with-clear > div {
-            flex: 1;
-        }
-
-        .btn-clear {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            padding: 10px 18px;
-            min-width: 44px;
-            flex-shrink: 0;
-        }
-
-        .btn-clear:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-
-        .input-with-button button[type="submit"] {
-            padding: 10px 18px;
-            min-width: 44px;
-            flex-shrink: 0;
+        @media (max-width: 768px) {
+            .message-section {
+                grid-template-columns: 1fr;
+            }
         }
 
         .message-cache {
@@ -347,13 +328,6 @@
             padding: 15px;
             max-height: 500px;
             overflow-y: auto;
-        }
-
-        .message-cache-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #a78bfa;
-            margin-bottom: 15px;
         }
 
         .cached-message {
@@ -369,26 +343,12 @@
         .cached-message:hover {
             background: rgba(139, 92, 246, 0.1);
             border-color: rgba(139, 92, 246, 0.3);
-            transform: translateX(4px);
-        }
-
-        .cached-message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
         }
 
         .cached-message-user {
             font-weight: 600;
             color: #8b5cf6;
             font-size: 0.9rem;
-        }
-
-        .cached-message-id {
-            font-size: 0.75rem;
-            color: #9ca3af;
-            font-family: 'Courier New', monospace;
         }
 
         .cached-message-text {
@@ -398,57 +358,51 @@
             word-break: break-word;
         }
 
-        .cached-message-badge {
-            display: inline-block;
-            background: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            margin-top: 6px;
-        }
-
-        .no-messages {
-            text-align: center;
-            color: #6b7280;
-            padding: 30px;
-            font-style: italic;
-        }
-
-        .message-reactions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .reaction-count {
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.25);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
+        .placeholder-info {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
             color: #d1d5db;
-            display: inline-flex;
+        }
+
+        .placeholder-list code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+        }
+
+        .link-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .link-input-group input:first-child { flex: 0.4; }
+        .link-input-group input:nth-child(2) { flex: 0.6; }
+
+        .empty-selection {
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
+            height: 100%;
+            color: #6b7280;
+            text-align: center;
+            padding: 40px;
         }
 
-        .reaction-btn {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 4px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
+        .empty-selection-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
 
-        .reaction-btn:hover {
-            background: rgba(139, 92, 246, 0.3);
-            transform: scale(1.1);
-        }
-
+        /* Reactions */
         .reaction-picker {
             display: none;
             position: fixed;
@@ -479,14 +433,6 @@
             z-index: 999;
         }
 
-        .reaction-picker-title {
-            color: #e4e4e7;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
         .reaction-picker-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
@@ -506,103 +452,24 @@
 
         .reaction-emoji:hover {
             background: rgba(139, 92, 246, 0.3);
-            border-color: rgba(139, 92, 246, 0.5);
             transform: scale(1.15);
         }
 
-        .placeholder-info {
-            background: rgba(139, 92, 246, 0.1);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            color: #d1d5db;
+        .reaction-btn {
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
         }
 
-        .placeholder-info strong {
-            color: #a78bfa;
-        }
-
-        .placeholder-list {
-            margin-top: 8px;
-            line-height: 1.8;
-        }
-
-        .placeholder-list code {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #10b981;
-            font-family: 'Courier New', monospace;
-        }
-
-        .link-input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 12px;
-            align-items: center;
-        }
-
-        .link-input-group input {
-            flex: 1;
-        }
-
-        .link-input-group input:first-child {
-            flex: 0.4;
-        }
-
-        .link-input-group input:nth-child(2) {
-            flex: 0.6;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            header {
-                padding: 25px 15px;
-                margin-bottom: 30px;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
-            .card {
-                padding: 15px;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-
-            .button-group button {
-                width: 100%;
-            }
-
-            .message-section {
-                display: flex;
-                flex-direction: column-reverse;
-                gap: 20px;
-            }
-
-            .message-cache {
-                max-height: 300px;
-            }
-
-            .input-with-button button[type="submit"] {
-                align-self: flex-end;
-            }
-
-            .input-with-clear .btn-clear {
-                align-self: flex-end;
-            }
+        .reaction-count {
+            background: rgba(139, 92, 246, 0.15);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 4px;
         }
     </style>
 </head>
@@ -613,186 +480,235 @@
             <p class="subtitle">Telegram Bot Control Panel</p>
         </header>
 
-        <div class="grid">
-            <!-- Toggle Controls Card -->
+        <div class="main-layout">
+            <!-- Features Column -->
             <div class="card">
                 <div class="card-title">
                     <span class="card-icon">⚙️</span>
                     Features
                 </div>
 
-                <form action="/setLinks" id="linkForm">
-                    <div class="toggle-container">
-                        <label class="toggle-label" for="linkToggle">Link Detection</label>
+                <div class="feature-item" id="feature-links" onclick="showSettings('links')">
+                    <div class="feature-info">
+                        <span class="feature-name">Link detection</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
                         <label class="switch">
-                            <input type="checkbox" id="linkToggle" name="toggle"{{ if .LinkDetection }} checked{{ end }}>
+                            <input type="checkbox" id="linkToggle" onchange="toggleFeature('linkToggle', '/setLinks')"{{ if .LinkDetection }} checked{{ end }}>
                             <span class="slider"></span>
                         </label>
                     </div>
-                </form>
-
-                <form action="/setChannelForward" id="channelForwardForm">
-                    <div class="toggle-container">
-                        <label class="toggle-label" for="channelForwardToggle">Channel Forward</label>
-                        <label class="switch">
-                            <input type="checkbox" id="channelForwardToggle" name="toggle"{{ if .ChannelForward }} checked{{ end }}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </form>
-
-                <form action="/setAdminForward" id="adminForwardForm">
-                    <div class="toggle-container">
-                        <label class="toggle-label" for="adminForwardToggle">Admin Forward</label>
-                        <label class="switch">
-                            <input type="checkbox" id="adminForwardToggle" name="toggle"{{ if .AdminForward }} checked{{ end }}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </form>
-
-                <form action="/setAutoBan" id="autoBanForm">
-                    <div class="toggle-container">
-                        <label class="toggle-label" for="autoBanToggle">Auto-Ban</label>
-                        <label class="switch">
-                            <input type="checkbox" id="autoBanToggle" name="toggle"{{ if .AutoBan }} checked{{ end }}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </form>
-
-                <form action="/setWelcomeMessage" id="welcomeMessageForm">
-                    <div class="toggle-container">
-                        <label class="toggle-label toggle-label-clickable" for="welcomeMessageToggle" onclick="event.preventDefault(); openWelcomeModal();">Welcome Message ⚙️</label>
-                        <label class="switch">
-                            <input type="checkbox" id="welcomeMessageToggle" name="toggle"{{ if .WelcomeMessage }} checked{{ end }}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Chat IDs Card -->
-            <div class="card">
-                <div class="card-title">
-                    <span class="card-icon">🆔</span>
-                    Chat configuration
                 </div>
 
-                <form action="/setChannel" id="channelForm">
-                    <div class="input-with-button">
-                        <div>
+                <div class="feature-item" id="feature-channel" onclick="showSettings('channel')">
+                    <div class="feature-info">
+                        <span class="feature-name">Channel forward</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="channelForwardToggle" onchange="toggleFeature('channelForwardToggle', '/setChannelForward')"{{ if .ChannelForward }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="feature-item" id="feature-admin" onclick="showSettings('admin')">
+                    <div class="feature-info">
+                        <span class="feature-name">Admin forward</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="adminForwardToggle" onchange="toggleFeature('adminForwardToggle', '/setAdminForward')"{{ if .AdminForward }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="feature-item" id="feature-autoban" onclick="showSettings('autoban')">
+                    <div class="feature-info">
+                        <span class="feature-name">Auto-ban</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="autoBanToggle" onchange="toggleFeature('autoBanToggle', '/setAutoBan')"{{ if .AutoBan }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="feature-item" id="feature-welcome" onclick="showSettings('welcome')">
+                    <div class="feature-info">
+                        <span class="feature-name">Welcome message</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="welcomeMessageToggle" onchange="toggleFeature('welcomeMessageToggle', '/setWelcomeMessage')"{{ if .WelcomeMessage }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Column -->
+            <div class="card" id="settings-container">
+                <div class="empty-selection" id="empty-settings">
+                    <div class="empty-selection-icon">🛠️</div>
+                    <h2>Select a feature to configure</h2>
+                    <p>Click a feature to see its settings.</p>
+                </div>
+
+                <!-- Link Detection Settings -->
+                <div class="settings-panel" id="settings-links">
+                    <div class="card-title">Link detection settings</div>
+                    <p style="margin-bottom: 20px; color: #9ca3af;">Enable or disable individual link transformers.</p>
+                    <div class="replacer-grid">
+                        {{ range .AllReplacers }}
+                        <div class="replacer-item" title="{{ .Regex.String }}">
+                            <span style="font-size: 0.9rem;">{{ .Name }}</span>
+                            <label class="switch">
+                                <input type="checkbox" class="replacer-toggle" data-name="{{ .Name }}"
+                                    {{ if index $.EnabledReplacers .Name }} checked{{ end }}
+                                    onchange="toggleReplacer(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <!-- Channel Forward Settings -->
+                <div class="settings-panel" id="settings-channel">
+                    <div class="card-title">Channel forward settings</div>
+                    <form onsubmit="updateId(event, '/setChannel', 'channelId')">
+                        <div class="input-group">
                             <label class="input-label" for="channelId">Channel ID</label>
-                            <input type="text" id="channelId" name="id" value="{{ .ChannelID }}" placeholder="Enter channel ID" required>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="channelId" name="id" value="{{ .ChannelID }}" placeholder="Enter channel ID" required>
+                                <button type="submit">Update</button>
+                            </div>
                         </div>
-                        <button type="submit">Update</button>
-                    </div>
-                </form>
-
-                <form action="/setGroup" id="groupForm">
-                    <div class="input-with-button">
-                        <div>
+                    </form>
+                    <form onsubmit="updateId(event, '/setGroup', 'groupId')">
+                        <div class="input-group">
                             <label class="input-label" for="groupId">Group ID</label>
-                            <input type="text" id="groupId" name="id" value="{{ .GroupID }}" placeholder="Enter group ID" required>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="groupId" name="id" value="{{ .GroupID }}" placeholder="Enter group ID" required>
+                                <button type="submit">Update</button>
+                            </div>
                         </div>
-                        <button type="submit">Update</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
 
-                <form action="/setAdmin" id="adminForm">
-                    <div class="input-with-button">
-                        <div>
+                <!-- Admin Forward Settings -->
+                <div class="settings-panel" id="settings-admin">
+                    <div class="card-title">Admin forward settings</div>
+                    <form onsubmit="updateId(event, '/setAdmin', 'adminId')">
+                        <div class="input-group">
                             <label class="input-label" for="adminId">Admin ID</label>
-                            <input type="text" id="adminId" name="id" value="{{ .AdminID }}" placeholder="Enter admin ID" required>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="adminId" name="id" value="{{ .AdminID }}" placeholder="Enter admin ID" required>
+                                <button type="submit">Update</button>
+                            </div>
                         </div>
-                        <button type="submit">Update</button>
+                    </form>
+                </div>
+
+                <!-- Auto Ban Settings -->
+                <div class="settings-panel" id="settings-autoban">
+                    <div class="card-title">Auto-ban settings</div>
+                    <form id="bannedWordsForm">
+                        <label class="input-label">Banned words</label>
+                        <div id="bannedWordsContainer">
+                            {{ range .BannedWords }}
+                            <div class="word-input-group">
+                                <input type="text" name="word" value="{{ . }}" placeholder="Enter banned word">
+                                <button type="button" class="btn-remove" onclick="this.parentElement.remove()">🗑️</button>
+                            </div>
+                            {{ end }}
+                        </div>
+                        <div class="button-group">
+                            <button type="button" class="btn-add" onclick="addBannedWord()">Add</button>
+                            <button type="submit">Save</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Welcome Message Settings -->
+                <div class="settings-panel" id="settings-welcome">
+                    <div class="card-title">Welcome message settings</div>
+                    <div class="placeholder-info">
+                        <strong>Placeholders:</strong> <code>{USER_NAME}</code>, <code>{USER_ID}</code>, <code>{GROUP_ID}</code>
                     </div>
-                </form>
+                    <form id="welcomeSettingsForm">
+                        <div class="input-group">
+                            <label class="input-label" for="welcomeText">Message text (Markdown)</label>
+                            <textarea id="welcomeText" name="welcomeText" placeholder="Enter welcome message...">{{ .WelcomeText }}</textarea>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="welcomePhoto">Photo URL (optional)</label>
+                            <input type="text" id="welcomePhoto" name="welcomePhoto" value="{{ .WelcomePhoto }}" placeholder="https://example.com/image.jpg">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Button links</label>
+                            <div id="welcomeLinksContainer"></div>
+                            <button type="button" class="btn-add" onclick="addWelcomeLink()" style="margin-top: 10px;">Add</button>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit">Save</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <!-- Banned Words Card (Full Width) -->
-        <div class="card full-width">
-            <div class="card-title">
-                <span class="card-icon">🚫</span>
-                Banned words
-            </div>
-
-            <form action="/setBannedWords" method="POST" id="bannedWordsForm">
-                <div id="bannedWordsContainer" class="banned-words-wrapper">
-                    {{ range .BannedWords }}
-                    <div class="word-input-group">
-                        <input type="text" name="word" value="{{ . }}" placeholder="Enter banned word">
-                        <button type="button" class="btn-remove">🗑️</button>
-                    </div>
-                    {{ end }}
-                </div>
-                <div class="button-group">
-                    <button type="button" id="addWordBtn" class="btn-add">Add</button>
-                    <button type="submit">Save</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Send Message Card (Full Width) -->
-        <div class="card full-width">
+        <!-- Send Message Card -->
+        <div class="card" style="margin-bottom: 30px;">
             <div class="card-title">
                 <span class="card-icon">💬</span>
                 Send message
             </div>
 
             <div class="message-section">
-                <!-- Message Form -->
-                <div>
-                    <form id="messageForm">
+                <form id="messageForm">
+                    <div class="input-group">
+                        <label class="input-label" for="customMessage">Message content</label>
+                        <textarea id="customMessage" name="customMessage" placeholder="Enter your message here..." required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="input-group">
-                            <label class="input-label" for="customMessage">Message content</label>
-                            <textarea id="customMessage" name="customMessage" placeholder="Enter your message here..." required></textarea>
+                            <label class="input-label" for="recipientId">Recipient ID</label>
+                            <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
                         </div>
-
-                        <div class="input-with-clear">
-                            <div>
-                                <label class="input-label" for="recipientId">Recipient ID</label>
-                                <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" placeholder="Chat ID" required>
-                            </div>
-                            <button type="button" class="btn-clear" onclick="document.getElementById('recipientId').value='{{ .GroupID }}'">🔄</button>
-                        </div>
-
-                        <div class="input-with-clear">
-                            <div>
-                                <label class="input-label" for="threadId">Thread ID (optional)</label>
-                                <input type="text" id="threadId" name="threadId" placeholder="Leave empty for non-threaded groups">
-                            </div>
-                            <button type="button" class="btn-clear" onclick="document.getElementById('threadId').value=''">🗑️</button>
-                        </div>
-
-                        <div class="input-with-clear">
-                            <div>
-                                <label class="input-label" for="replyToMessageId">Reply to message ID (optional)</label>
-                                <input type="text" id="replyToMessageId" name="replyToMessageId" placeholder="Leave empty for no reply">
-                            </div>
-                            <button type="button" class="btn-clear" onclick="document.getElementById('replyToMessageId').value=''">🗑️</button>
-                        </div>
-
                         <div class="input-group">
                             <label class="input-label" for="parseMode">Parse mode</label>
                             <select id="parseMode" name="parseMode">
-                                <option value="">None (Plain Text)</option>
+                                <option value="">Plaintext</option>
                                 <option value="Markdown">Markdown</option>
                                 <option value="MarkdownV2">MarkdownV2</option>
                                 <option value="HTML">HTML</option>
                             </select>
                         </div>
+                    </div>
 
-                        <button type="button" id="customMessageButton" class="btn-secondary" style="width: 100%; margin-top: 10px;">Send</button>
-                    </form>
-                </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="input-group">
+                            <label class="input-label" for="threadId">Thread ID</label>
+                            <input type="text" id="threadId" name="threadId" placeholder="Optional">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="replyToMessageId">Reply to ID</label>
+                            <input type="text" id="replyToMessageId" name="replyToMessageId" placeholder="Optional">
+                        </div>
+                    </div>
 
-                <!-- Message Cache -->
+                    <button type="button" id="customMessageButton" class="btn-secondary" style="width: 100%;">Send</button>
+                </form>
+
                 <div>
                     <label class="input-label">Recent messages</label>
                     <div class="message-cache" id="messageCache">
-                        <div class="no-messages">Loading messages...</div>
+                        <div class="no-messages" style="text-align: center; padding: 20px; color: #6b7280;">Loading messages...</div>
                     </div>
                 </div>
             </div>
@@ -802,454 +718,265 @@
     <!-- Reaction Picker Modal -->
     <div class="reaction-picker-overlay" id="reactionOverlay" onclick="closeReactionPicker()"></div>
     <div class="reaction-picker" id="reactionPicker">
-        <div class="reaction-picker-title">Select a reaction</div>
+        <div class="card-title" style="justify-content: center;">Select reaction</div>
         <div class="reaction-picker-grid" id="reactionGrid"></div>
     </div>
 
-    <!-- Welcome Message Settings Modal -->
-    <div class="reaction-picker-overlay" id="welcomeOverlay" onclick="closeWelcomeModal()"></div>
-    <div class="reaction-picker" id="welcomeModal" style="max-width: 600px;">
-        <div class="reaction-picker-title">Welcome Message Settings</div>
-
-        <div class="placeholder-info">
-            <strong>Available placeholders:</strong>
-            <div class="placeholder-list">
-                <code>{USER_NAME}</code> - User's first name<br>
-                <code>{USER_ID}</code> - User's Telegram ID<br>
-                <code>{GROUP_ID}</code> - Group's Telegram ID
-            </div>
-            <div style="margin-top: 10px;">
-                <strong>Markdown syntax:</strong>
-                <div class="placeholder-list">
-                    <code>*bold*</code> - <strong>bold</strong><br>
-                    <code>_italic_</code> - <em>italic</em><br>
-                    <code>[text](url)</code> - link
-                </div>
-            </div>
-        </div>
-
-        <form id="welcomeSettingsForm">
-            <div class="input-group">
-                <label class="input-label" for="welcomeText">Welcome Text (Markdown)</label>
-                <textarea id="welcomeText" name="welcomeText" placeholder="Enter welcome message with Markdown formatting...">{{ .WelcomeText }}</textarea>
-            </div>
-
-            <div class="input-group">
-                <label class="input-label" for="welcomePhoto">Photo URL (optional)</label>
-                <input type="text" id="welcomePhoto" name="welcomePhoto" value="{{ .WelcomePhoto }}" placeholder="https://example.com/image.jpg">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Welcome Links</label>
-                <div class="placeholder-info" style="margin-bottom: 10px;">
-                    Add button links that appear below the welcome message.
-                </div>
-                <div id="welcomeLinksContainer"></div>
-                <button type="button" id="addLinkBtn" class="btn-add" style="margin-top: 10px;">Add Link</button>
-            </div>
-
-            <div class="button-group">
-                <button type="button" onclick="closeWelcomeModal()" style="background: #4b5563;">Cancel</button>
-                <button type="submit">Save</button>
-            </div>
-        </form>
-    </div>
-
     <script>
-        const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/"
-        const sendMessageUrl = baseUrl + "sendMessage"
-        const messageParams = new URLSearchParams({
-            "text": "",
-            "chat_id": "",
-            "reply_to_message_id": "",
-            "disable_web_page_preview": "false",
-            "disable_notification": "false",
-        })
-        const customMessageBox = document.getElementById("customMessage");
-        const replyToMessageIdBox = document.getElementById("replyToMessageId");
-
-        // Handle toggles without page reload
-        function handleToggle(toggleId, endpoint) {
-            document.getElementById(toggleId).addEventListener('change', (e) => {
-                const params = new URLSearchParams();
-                params.append('toggle', e.target.checked ? 'on' : 'off');
-
-                fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: params
-                }).catch(err => console.error('Error updating toggle:', err));
-            });
-        }
-
-        handleToggle('linkToggle', '/setLinks');
-        handleToggle('channelForwardToggle', '/setChannelForward');
-        handleToggle('adminForwardToggle', '/setAdminForward');
-        handleToggle('autoBanToggle', '/setAutoBan');
-        handleToggle('welcomeMessageToggle', '/setWelcomeMessage');
-
-        // Welcome Message Modal
+        const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
+        let messageCache = [];
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
-        function parseWelcomeLinks(linksStr) {
-            if (!linksStr) return [];
-            return linksStr.split('\n').filter(line => line.includes('|')).map(line => {
-                const [text, url] = line.split('|', 2);
-                return { text: text || '', url: url || '' };
+        // --- UI Switching ---
+        function showSettings(panelId) {
+            // Update active state in feature list
+            document.querySelectorAll('.feature-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('feature-' + panelId).classList.add('active');
+
+            // Show selected panel
+            document.getElementById('empty-settings').style.display = 'none';
+            document.querySelectorAll('.settings-panel').forEach(el => el.classList.remove('active'));
+            document.getElementById('settings-' + panelId).classList.add('active');
+
+            if (panelId === 'welcome') {
+                renderWelcomeLinks();
+            }
+        }
+
+        // --- Feature Toggles ---
+        function toggleFeature(id, endpoint) {
+            const checkbox = document.getElementById(id);
+            const params = new URLSearchParams();
+            params.append('toggle', checkbox.checked ? 'on' : 'off');
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).catch(err => {
+                console.error('Error:', err);
+                checkbox.checked = !checkbox.checked; // Revert
             });
         }
 
-        function createLinkInput(text = '', url = '') {
-            const div = document.createElement('div');
-            div.className = 'link-input-group';
-
-            const textInput = document.createElement('input');
-            textInput.type = 'text';
-            textInput.name = 'linkText';
-            textInput.value = text;
-            textInput.placeholder = 'Button text';
-
-            const urlInput = document.createElement('input');
-            urlInput.type = 'text';
-            urlInput.name = 'linkUrl';
-            urlInput.value = url;
-            urlInput.placeholder = 'URL (supports placeholders)';
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'btn-remove';
-            removeBtn.textContent = '🗑️';
-            removeBtn.addEventListener('click', () => div.remove());
-
-            div.appendChild(textInput);
-            div.appendChild(urlInput);
-            div.appendChild(removeBtn);
-            return div;
-        }
-
-        function openWelcomeModal() {
-            const container = document.getElementById('welcomeLinksContainer');
-            container.innerHTML = '';
-
-            const links = parseWelcomeLinks(welcomeLinksData);
-            if (links.length === 0) {
-                container.appendChild(createLinkInput());
-            } else {
-                links.forEach(link => {
-                    container.appendChild(createLinkInput(link.text, link.url));
-                });
-            }
-
-            document.getElementById('welcomeOverlay').style.display = 'block';
-            document.getElementById('welcomeModal').style.display = 'block';
-        }
-
-        function closeWelcomeModal() {
-            document.getElementById('welcomeOverlay').style.display = 'none';
-            document.getElementById('welcomeModal').style.display = 'none';
-        }
-
-        document.getElementById('addLinkBtn').addEventListener('click', () => {
-            document.getElementById('welcomeLinksContainer').appendChild(createLinkInput());
-        });
-
-        document.getElementById('welcomeSettingsForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const welcomeText = document.getElementById('welcomeText').value;
-            const welcomePhoto = document.getElementById('welcomePhoto').value;
-
-            // Collect links
-            const linkTexts = Array.from(document.querySelectorAll('input[name="linkText"]')).map(i => i.value);
-            const linkUrls = Array.from(document.querySelectorAll('input[name="linkUrl"]')).map(i => i.value);
-
-            const links = [];
-            for (let i = 0; i < linkTexts.length; i++) {
-                if (linkTexts[i] && linkUrls[i]) {
-                    links.push(linkTexts[i] + '|' + linkUrls[i]);
-                }
-            }
-            const welcomeLinks = links.join('\n');
-
+        function toggleReplacer(checkbox) {
+            const name = checkbox.getAttribute('data-name');
             const params = new URLSearchParams();
-            params.append('welcomeText', welcomeText);
-            params.append('welcomePhoto', welcomePhoto);
-            params.append('welcomeLinks', welcomeLinks);
+            params.append('name', name);
+            params.append('toggle', checkbox.checked ? 'on' : 'off');
 
-            fetch('/setWelcomeContent', {
+            fetch('/setReplacer', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).catch(err => {
+                console.error('Error:', err);
+                checkbox.checked = !checkbox.checked;
+            });
+        }
+
+        // --- ID Updates ---
+        function updateId(event, endpoint, inputId) {
+            event.preventDefault();
+            const val = document.getElementById(inputId).value;
+            const params = new URLSearchParams();
+            params.append('id', val);
+
+            const btn = event.target.querySelector('button');
+            const originalText = btn.textContent;
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params
             }).then(() => {
-                // Update local data
-                welcomeLinksData = welcomeLinks;
-
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalText = btn.textContent;
-                btn.textContent = '✓ Saved';
+                btn.textContent = '✓';
+                btn.style.background = '#10b981';
                 setTimeout(() => {
                     btn.textContent = originalText;
-                    closeWelcomeModal();
-                }, 1000);
-            }).catch(err => {
-                console.error('Error updating welcome settings:', err);
-                alert('Error saving welcome settings');
-            });
-        });
-
-        // Handle ID updates without page reload
-        function handleIdForm(formId, endpoint) {
-            document.getElementById(formId).addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const params = new URLSearchParams(formData);
-
-                fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: params
-                }).then(() => {
-                    // Visual feedback
-                    const btn = e.target.querySelector('button[type="submit"]');
-                    const originalText = btn.textContent;
-                    btn.textContent = '✓ Updated';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Error updating ID:', err);
-                    alert('Error updating value');
-                });
+                    btn.style.background = '';
+                }, 2000);
             });
         }
 
-        handleIdForm('channelForm', '/setChannel');
-        handleIdForm('groupForm', '/setGroup');
-        handleIdForm('adminForm', '/setAdmin');
+        // --- Banned Words ---
+        function addBannedWord(value = '') {
+            const container = document.getElementById('bannedWordsContainer');
+            const div = document.createElement('div');
+            div.className = 'word-input-group';
+            div.innerHTML = `
+                <input type="text" name="word" value="${value}" placeholder="Enter banned word">
+                <button type="button" class="btn-remove" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
 
-        // Handle banned words form without page reload
         document.getElementById('bannedWordsForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
+            const params = new URLSearchParams();
+            formData.forEach((value, key) => params.append(key, value));
+            const btn = e.target.querySelector('button[type="submit"]');
 
             fetch('/setBannedWords', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
             }).then(() => {
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalText = btn.textContent;
-                btn.textContent = '✓ Saved';
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = 'Save All', 2000);
+            });
+        });
+
+        // --- Welcome Message ---
+        function renderWelcomeLinks() {
+            const container = document.getElementById('welcomeLinksContainer');
+            container.innerHTML = '';
+
+            const links = welcomeLinksData ? welcomeLinksData.split('\n').filter(l => l.includes('|')) : [];
+            if (links.length === 0) {
+                addWelcomeLink();
+            } else {
+                links.forEach(l => {
+                    const [text, url] = l.split('|');
+                    addWelcomeLink(text, url);
+                });
+            }
+        }
+
+        function addWelcomeLink(text = '', url = '') {
+            const container = document.getElementById('welcomeLinksContainer');
+            const div = document.createElement('div');
+            div.className = 'link-input-group';
+            div.innerHTML = `
+                <input type="text" name="linkText" value="${text}" placeholder="Button Text">
+                <input type="text" name="linkUrl" value="${url}" placeholder="URL">
+                <button type="button" class="btn-remove" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(div);
+        }
+
+        document.getElementById('welcomeSettingsForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const texts = Array.from(e.target.querySelectorAll('input[name="linkText"]')).map(i => i.value);
+            const urls = Array.from(e.target.querySelectorAll('input[name="linkUrl"]')).map(i => i.value);
+
+            const links = [];
+            for(let i=0; i<texts.length; i++) {
+                if(texts[i] && urls[i]) links.push(`${texts[i]}|${urls[i]}`);
+            }
+            const linksStr = links.join('\n');
+
+            const params = new URLSearchParams();
+            params.append('welcomeText', document.getElementById('welcomeText').value);
+            params.append('welcomePhoto', document.getElementById('welcomePhoto').value);
+            params.append('welcomeLinks', linksStr);
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+
+            fetch('/setWelcomeContent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).then(() => {
+                welcomeLinksData = linksStr;
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            });
+        });
+
+        // --- Messaging ---
+        document.getElementById("customMessageButton").addEventListener("click", (e) => {
+            const btn = e.target;
+            const originalText = btn.textContent;
+            const text = document.getElementById("customMessage").value;
+            const chat_id = document.getElementById("recipientId").value;
+            const reply_to = document.getElementById("replyToMessageId").value;
+            const thread_id = document.getElementById("threadId").value;
+            const parse_mode = document.getElementById("parseMode").value;
+
+            if(!text || !chat_id) {
+                btn.textContent = 'Required fields missing!';
+                btn.style.background = '#ef4444';
                 setTimeout(() => {
                     btn.textContent = originalText;
+                    btn.style.background = '';
                 }, 2000);
-            }).catch(err => {
-                console.error('Error updating banned words:', err);
-                alert('Error saving banned words');
-            });
-        });
-
-        // Banned words dynamic input management
-        const bannedWordsContainer = document.getElementById('bannedWordsContainer');
-        const addWordBtn = document.getElementById('addWordBtn');
-
-        function createWordInput(value = '') {
-            const div = document.createElement('div');
-            div.className = 'word-input-group';
-
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.name = 'word';
-            input.value = value;
-            input.placeholder = 'Enter banned word';
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'btn-remove';
-            removeBtn.textContent = '🗑️';
-            removeBtn.addEventListener('click', () => {
-                div.remove();
-            });
-
-            div.appendChild(input);
-            div.appendChild(removeBtn);
-            return div;
-        }
-
-        addWordBtn.addEventListener('click', () => {
-            const newInput = createWordInput();
-            bannedWordsContainer.appendChild(newInput);
-        });
-
-        // Add remove functionality to existing inputs
-        document.querySelectorAll('.btn-remove').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.target.parentElement.remove();
-            });
-        });
-
-        // Ensure at least one input exists
-        if (bannedWordsContainer.children.length === 0) {
-            bannedWordsContainer.appendChild(createWordInput('18+'));
-        }
-
-        // Send custom message
-        document.getElementById("customMessageButton").addEventListener("click", (event) => {
-            event.preventDefault()
-            const value = customMessageBox.value;
-            const replyToMessageId = replyToMessageIdBox.value;
-            const recipient = document.getElementById("recipientId").value;
-            const threadId = document.getElementById("threadId").value;
-            const parseMode = document.getElementById("parseMode").value;
-
-            if (!value || !recipient) {
-                alert('Please fill in required fields');
                 return;
             }
 
-            messageParams.set("text", value);
-            messageParams.set("chat_id", recipient);
-            messageParams.set("reply_to_message_id", replyToMessageId || "");
+            const params = new URLSearchParams({ text, chat_id });
+            if(reply_to) params.append('reply_to_message_id', reply_to);
+            if(thread_id) params.append('message_thread_id', thread_id);
+            if(parse_mode) params.append('parse_mode', parse_mode);
 
-            // Add parse_mode if selected
-            if (parseMode) {
-                messageParams.set("parse_mode", parseMode);
-            } else {
-                messageParams.delete("parse_mode");
-            }
-
-            // Add thread_id if provided (for topics/forums)
-            if (threadId) {
-                messageParams.set("message_thread_id", threadId);
-            } else {
-                messageParams.delete("message_thread_id");
-            }
-
-            const request_url = sendMessageUrl + "?" + messageParams;
-            console.log(request_url);
-
-            fetch(request_url).then((response) => {
-                response.json().then((data) => {
-                    console.log(data);
-                    if (data.ok) {
-                        customMessageBox.value = "";
-                        replyToMessageIdBox.value = "";
-                        //alert('✅ Message sent successfully!');
+            fetch(baseUrl + "sendMessage?" + params)
+                .then(r => r.json())
+                .then(data => {
+                    if(data.ok) {
+                        document.getElementById("customMessage").value = "";
+                        btn.textContent = 'Sent!';
+                        btn.style.background = '#10b981';
                     } else {
-                        alert('❌ Error: ' + data.description);
+                        btn.textContent = 'Error!';
+                        btn.style.background = '#ef4444';
+                        console.error('Telegram Error:', data.description);
                     }
-                })
-            }).catch(err => {
-                alert('❌ Network error: ' + err.message);
-            })
-        })
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 2000);
+                });
+        });
 
-        // WebSocket connection for real-time messages
-        let ws;
-        let messageCache = [];
-        const MAX_CACHE_SIZE = 100; // Must match MaxCacheSize in backend
-
+        // --- WebSocket & Cache ---
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-            ws = new WebSocket(wsUrl);
+            ws.onopen = () => fetch('/api/messageCache').then(r => r.json()).then(msgs => {
+                messageCache = msgs;
+                renderMessages();
+            });
 
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                // Load initial cache
-                loadInitialCache();
-            };
-
-            ws.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                addMessageToCache(msg);
+            ws.onmessage = (e) => {
+                messageCache.unshift(JSON.parse(e.data));
+                if(messageCache.length > 100) messageCache.pop();
                 renderMessages();
             };
 
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
-
-            ws.onclose = () => {
-                console.log('WebSocket disconnected, reconnecting in 3s...');
-                setTimeout(connectWebSocket, 3000);
-            };
-        }
-
-        function loadInitialCache() {
-            fetch('/api/messageCache')
-                .then(response => response.json())
-                .then(messages => {
-                    messageCache = messages;
-                    renderMessages();
-                })
-                .catch(err => {
-                    console.error('Error loading initial cache:', err);
-                    document.getElementById('messageCache').innerHTML =
-                        '<div class="no-messages">Error loading messages</div>';
-                });
-        }
-
-        function addMessageToCache(msg) {
-            messageCache.unshift(msg); // Add to beginning (newest first)
-
-            // Maintain max cache size
-            if (messageCache.length > MAX_CACHE_SIZE) {
-                messageCache.pop(); // Remove oldest
-            }
+            ws.onclose = () => setTimeout(connectWebSocket, 3000);
         }
 
         function renderMessages() {
-            const cacheContainer = document.getElementById('messageCache');
-
-            if (messageCache.length === 0) {
-                cacheContainer.innerHTML = '<div class="no-messages">No messages in cache yet</div>';
+            const container = document.getElementById('messageCache');
+            if(messageCache.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No messages yet</div>';
                 return;
             }
 
-            cacheContainer.innerHTML = messageCache.map(msg => {
-                const userName = msg.from_first_name || msg.from_username || 'Unknown';
-                const hasThread = msg.is_topic_message && msg.thread_id;
-
-                const reactionsHtml = msg.reactions && msg.reactions.length > 0
-                    ? `<div class="message-reactions">${msg.reactions.map(r =>
-                        `<span class="reaction-count">${r.type?.emoji || '?'} ${r.total_count}</span>`
-                    ).join('')}</div>`
-                    : '';
-
-                return `
-                    <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
-                        <div class="cached-message-header">
-                            <span class="cached-message-user">${userName}</span>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})' title="Add reaction">😊</button>
-                                <span class="cached-message-id">#${msg.message_id}</span>
-                            </div>
+            container.innerHTML = messageCache.map(msg => `
+                <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                        <span class="cached-message-user">${msg.from_first_name || 'User'}</span>
+                        <div style="display:flex;gap:5px;">
+                            <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})'>😊</button>
+                            <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
                         </div>
-                        <div class="cached-message-text">${msg.text || '<empty message>'}</div>
-                        ${reactionsHtml}
-                        ${hasThread ? `<span class="cached-message-badge">Thread: ${msg.thread_id}</span>` : ''}
                     </div>
-                `;
-            }).join('');
+                    <div class="cached-message-text">${msg.text || '<media>'}</div>
+                    <div style="margin-top:5px;">
+                        ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // Select a message from cache and fill form fields
         function selectMessage(msg) {
             document.getElementById('recipientId').value = msg.chat_id;
             document.getElementById('replyToMessageId').value = msg.message_id;
-
-            if (msg.is_topic_message && msg.thread_id) {
-                document.getElementById('threadId').value = msg.thread_id;
-            } else {
-                document.getElementById('threadId').value = '';
-            }
+            document.getElementById('threadId').value = msg.is_topic_message ? msg.thread_id : '';
 
             // Visual feedback
             const btn = document.getElementById('customMessageButton');
@@ -1260,28 +987,14 @@
             }, 1500);
         }
 
-        // Connect WebSocket on page load
-        connectWebSocket();
-
-        //const defaultReactions = ["👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨"];
-        let currentReactionChatId = null;
-        let currentReactionMessageId = null;
-
-        function showReactionPicker(chatId, messageId, reactions) {
-            currentReactionChatId = chatId;
-            currentReactionMessageId = messageId;
-
-            // Use provided reactions or defaults
-            if (!reactions || reactions.length === 0) {
-                alert('No available reactions for this message');
-                return;
-            }
-
+        // --- Reactions ---
+        let currReactChat, currReactMsg;
+        function showReactionPicker(chatId, msgId, reactions) {
+            currReactChat = chatId; currReactMsg = msgId;
             const grid = document.getElementById('reactionGrid');
-            grid.innerHTML = reactions.map(emoji =>
+            grid.innerHTML = (reactions.length ? reactions : ["👍", "❤️", "🔥", "👏"]).map(emoji =>
                 `<div class="reaction-emoji" onclick="sendReaction('${emoji}')">${emoji}</div>`
             ).join('');
-
             document.getElementById('reactionOverlay').style.display = 'block';
             document.getElementById('reactionPicker').style.display = 'block';
         }
@@ -1289,55 +1002,27 @@
         function closeReactionPicker() {
             document.getElementById('reactionOverlay').style.display = 'none';
             document.getElementById('reactionPicker').style.display = 'none';
-            currentReactionChatId = null;
-            currentReactionMessageId = null;
         }
 
         function sendReaction(emoji) {
-            if (!currentReactionChatId || !currentReactionMessageId) {
-                return;
-            }
-
-            const reactionUrl = baseUrl + "setMessageReaction";
             const params = new URLSearchParams({
-                chat_id: currentReactionChatId,
-                message_id: currentReactionMessageId,
-                reaction: JSON.stringify([{type: "emoji", emoji: emoji}])
+                chat_id: currReactChat,
+                message_id: currReactMsg,
+                reaction: JSON.stringify([{type: "emoji", emoji}])
             });
-
-            fetch(reactionUrl + "?" + params)
-            .then(response => response.json())
-            .then(data => {
-                if (data.ok) {
-                    console.log('Reaction sent:', emoji);
-
-                    // Update the cached message with the new reaction
-                    const msgIndex = messageCache.findIndex(m =>
-                        m.message_id === currentReactionMessageId &&
-                        m.chat_id === currentReactionChatId
-                    );
-
-                    if (msgIndex !== -1) {
-                        // Replace with the new reaction (only one reaction at a time per user)
-                        messageCache[msgIndex].reactions = [{
-                            type: { emoji: emoji },
-                            total_count: 1
-                        }];
-
-                        // Re-render messages to show the updated reaction
-                        renderMessages();
-                    }
-
+            fetch(baseUrl + "setMessageReaction?" + params).then(r => r.json()).then(data => {
+                if(data.ok) {
+                    const msg = messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
+                    if(msg) msg.reactions = [{type: {emoji}, total_count: 1}];
+                    renderMessages();
                     closeReactionPicker();
-                } else {
-                    alert('Failed to send reaction: ' + (data.description || 'Unknown error'));
                 }
-            })
-            .catch(err => {
-                console.error('Error sending reaction:', err);
-                alert('Error sending reaction');
             });
         }
+
+        // Initialize
+        showSettings('links');
+        connectWebSocket();
     </script>
 </body>
 </html>

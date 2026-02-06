@@ -9,6 +9,7 @@ import (
 )
 
 type Replacer struct {
+	Name   string
 	Regex  *regexp.Regexp
 	Format string
 }
@@ -20,40 +21,45 @@ const (
 )
 
 var replacers = []Replacer{
-	/*
-		{
-			Regex:  regexp.MustCompile(regexFlags + `(?:(?:https?:)?\/\/)?(?:(?:www|m)\.)?(?:(?:youtube(?:-nocookie)?\.com|youtu.be))(?:\/(?:[\w\-]+\?v=|embed\/|live\/|v\/|shorts\/)?)([\w\-]+)`),
-			Format: "https://y.outube.duckdns.org/%s",
-		},
-	*/
 	{
+		Name:   "Twitter",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?twitter\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
 		Format: "https://fxtwitter.com/%s/status/%s",
 	},
 	{
+		Name:   "X",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?x\.com\/(?:#!\/)?(.*)\/status(?:es)?\/([^\/\?\s]+)`),
 		Format: "https://fixupx.com/%s/status/%s",
 	},
 	{
+		Name:   "Bluesky",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?bsky\.app\/(profile\/[^\?\s]+)`),
 		Format: "https://xbsky.app/%s",
 	},
 	{
+		Name:   "Instagram",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(?:reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
 		Format: "https://kkinstagram.com/p/%s",
 	},
 	{
+		Name:   "TikTok",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/@([\w.]+)\/(?:video)\/(\d{19,})`),
 		Format: "https://www.kktiktok.com/@%s/video/%s",
 	},
 	{
+		Name:   "TikTok Short",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
 		Format: "https://vm.kktiktok.com/%s/",
 	},
 	{
+		Name:   "Reddit",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www|old)\.)?reddit\.com\/((?:r|u|user)\/[^\?\s]+)`),
 		Format: "https://rxddit.com/%s",
 	},
+}
+
+func GetReplacers() []Replacer {
+	return replacers
 }
 
 func isInSpoiler(entities []tgbotapi.MessageEntity, offset, length int) bool {
@@ -69,7 +75,7 @@ func isInSpoiler(entities []tgbotapi.MessageEntity, offset, length int) bool {
 	return false
 }
 
-func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) {
+func parseText(escarbot *EscarBot, text string, entities []tgbotapi.MessageEntity) (links []string) {
 	var rawLinks string
 	runes := []rune(text) // Convert to runes to handle emojis
 
@@ -88,7 +94,19 @@ func parseText(text string, entities []tgbotapi.MessageEntity) (links []string) 
 		}
 	}
 
+	escarbot.StateMutex.RLock()
+	enabledReplacers := make(map[string]bool)
+	for k, v := range escarbot.EnabledReplacers {
+		enabledReplacers[k] = v
+	}
+	escarbot.StateMutex.RUnlock()
+
 	for _, replacer := range replacers {
+		// Check if this replacer is enabled
+		if enabled, exists := enabledReplacers[replacer.Name]; exists && !enabled {
+			continue
+		}
+
 		foundMatches := replacer.Regex.FindStringSubmatch(rawLinks)
 		if len(foundMatches) == 0 {
 			continue
@@ -118,16 +136,16 @@ func getUserMention(user tgbotapi.User) string {
 	return fmt.Sprintf("[%s](tg://user?id=%d)", name, user.ID)
 }
 
-func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+func handleLinks(escarbot *EscarBot, message *tgbotapi.Message) {
 	links := []string{}
 
 	if len(message.Entities) > 0 {
-		textLinks := parseText(message.Text, message.Entities)
+		textLinks := parseText(escarbot, message.Text, message.Entities)
 		links = append(links, textLinks...)
 	}
 
 	if len(message.CaptionEntities) > 0 {
-		captionLinks := parseText(message.Caption, message.CaptionEntities)
+		captionLinks := parseText(escarbot, message.Caption, message.CaptionEntities)
 		links = append(links, captionLinks...)
 	}
 
@@ -136,6 +154,7 @@ func handleLinks(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	}
 
 	user := getUserMention(*message.From)
+	bot := escarbot.Bot
 
 	for _, link := range links {
 		text := fmt.Sprintf(linkMessage, link, user)

@@ -32,8 +32,18 @@ var indexTemplate = template.Must(template.New("index.html").Funcs(template.Func
 
 func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.RLock()
+		defer bot.StateMutex.RUnlock()
+
+		data := struct {
+			*telegram.EscarBot
+			AllReplacers []telegram.Replacer
+		}{
+			bot,
+			telegram.GetReplacers(),
+		}
 		buf := &bytes.Buffer{}
-		err := indexTemplate.Execute(buf, bot)
+		err := indexTemplate.Execute(buf, data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -56,6 +66,8 @@ func getChatID(w http.ResponseWriter, r *http.Request) (int64, error) {
 
 func linksHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
 		bot.LinkDetection = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("LINK_DETECTION", bot.LinkDetection)
 	}
@@ -63,6 +75,8 @@ func linksHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func channelForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
 		bot.ChannelForward = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("CHANNEL_FORWARD", bot.ChannelForward)
 	}
@@ -70,6 +84,8 @@ func channelForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func adminForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
 		bot.AdminForward = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("ADMIN_FORWARD", bot.AdminForward)
 	}
@@ -77,6 +93,8 @@ func adminForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
 		bot.AutoBan = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("AUTO_BAN", bot.AutoBan)
 	}
@@ -84,6 +102,8 @@ func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func welcomeMessageHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
 		bot.WelcomeMessage = toggleBotProperty(w, r)
 		UpdateBoolEnvVar("WELCOME_MESSAGE", bot.WelcomeMessage)
 	}
@@ -97,9 +117,11 @@ func welcomeContentHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		welcomePhoto := r.Form.Get("welcomePhoto")
 		welcomeLinks := r.Form.Get("welcomeLinks")
 
+		bot.StateMutex.Lock()
 		bot.WelcomeText = welcomeText
 		bot.WelcomePhoto = welcomePhoto
 		bot.WelcomeLinks = welcomeLinks
+		bot.StateMutex.Unlock()
 
 		UpdateEnvVar("WELCOME_TEXT", welcomeText)
 		UpdateEnvVar("WELCOME_PHOTO", welcomePhoto)
@@ -117,7 +139,9 @@ func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			log.Println(err)
 			return
 		}
+		bot.StateMutex.Lock()
 		bot.ChannelID = res
+		bot.StateMutex.Unlock()
 		UpdateEnvVar("CHANNEL_ID", strconv.FormatInt(res, 10))
 	}
 }
@@ -129,7 +153,9 @@ func groupHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			log.Println(err)
 			return
 		}
+		bot.StateMutex.Lock()
 		bot.GroupID = res
+		bot.StateMutex.Unlock()
 		UpdateEnvVar("GROUP_ID", strconv.FormatInt(res, 10))
 	}
 }
@@ -141,8 +167,29 @@ func adminHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			log.Println(err)
 			return
 		}
+		bot.StateMutex.Lock()
 		bot.AdminID = res
+		bot.StateMutex.Unlock()
 		UpdateEnvVar("ADMIN_ID", strconv.FormatInt(res, 10))
+	}
+}
+
+func replacerHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		name := r.Form.Get("name")
+		enabled := r.Form.Get("toggle") == "on"
+
+		if name == "" {
+			http.Error(w, "Missing name", http.StatusBadRequest)
+			return
+		}
+
+		bot.StateMutex.Lock()
+		bot.EnabledReplacers[name] = enabled
+		bot.StateMutex.Unlock()
+		envKey := "REPLACER_" + strings.ReplaceAll(strings.ToUpper(name), " ", "_") + "_ENABLED"
+		UpdateBoolEnvVar(envKey, enabled)
 	}
 }
 
@@ -163,7 +210,9 @@ func bannedWordsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		}
 
 		// Update bot's banned words
+		bot.StateMutex.Lock()
 		bot.BannedWords = filteredWords
+		bot.StateMutex.Unlock()
 
 		// Persist to .env
 		wordsStr := strings.Join(filteredWords, ",")
@@ -260,6 +309,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setChannel", channelHandler(bot))
 	r.HandleFunc("/setGroup", groupHandler(bot))
 	r.HandleFunc("/setAdmin", adminHandler(bot))
+	r.HandleFunc("/setReplacer", replacerHandler(bot))
 	r.HandleFunc("/setBannedWords", bannedWordsHandler(bot))
 	r.HandleFunc("/api/messageCache", messageCacheHandler(bot))
 	r.HandleFunc("/setReaction", setReactionHandler(bot))
