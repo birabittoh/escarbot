@@ -190,9 +190,15 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	// Get available reactions for this chat
 	reactions := getAvailableReactions(escarbot, message.Chat.ID)
 
+	chatTitle := message.Chat.Title
+	if chatTitle == "" {
+		chatTitle = message.Chat.FirstName
+	}
+
 	cached := CachedMessage{
 		MessageID:          message.MessageID,
 		ChatID:             message.Chat.ID,
+		ChatTitle:          chatTitle,
 		FromUsername:       message.From.UserName,
 		FromFirstName:      message.From.FirstName,
 		Text:               message.Text,
