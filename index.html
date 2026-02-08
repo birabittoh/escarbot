@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EscarBot - Control Panel</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -241,6 +242,11 @@
             border-color: #8b5cf6;
             background: rgba(255, 255, 255, 0.08);
             box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #e4e4e7;
         }
 
         button {
@@ -678,7 +684,10 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="input-group">
                             <label class="input-label" for="recipientId">Recipient ID</label>
-                            <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="recipientId" name="recipientId" value="{{ .GroupID }}" required>
+                                <button type="button" class="btn-icon" onclick="document.getElementById('recipientId').value = '{{ .GroupID }}'" title="Set to Group ID">🔄</button>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label class="input-label" for="parseMode">Parse mode</label>
@@ -694,11 +703,17 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="input-group">
                             <label class="input-label" for="threadId">Thread ID</label>
-                            <input type="text" id="threadId" name="threadId" placeholder="Optional">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="threadId" name="threadId" placeholder="Optional">
+                                <button type="button" class="btn-icon" onclick="document.getElementById('threadId').value = ''" title="Clear">🗑️</button>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label class="input-label" for="replyToMessageId">Reply to ID</label>
-                            <input type="text" id="replyToMessageId" name="replyToMessageId" placeholder="Optional">
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="replyToMessageId" name="replyToMessageId" placeholder="Optional">
+                                <button type="button" class="btn-icon" onclick="document.getElementById('replyToMessageId').value = ''" title="Clear">🗑️</button>
+                            </div>
                         </div>
                     </div>
 
@@ -916,6 +931,8 @@
                 .then(data => {
                     if(data.ok) {
                         document.getElementById("customMessage").value = "";
+                        document.getElementById("threadId").value = "";
+                        document.getElementById("replyToMessageId").value = "";
                         btn.textContent = 'Sent!';
                         btn.style.background = '#10b981';
                     } else {
@@ -959,7 +976,7 @@
             container.innerHTML = messageCache.map(msg => `
                 <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                        <span class="cached-message-user">${msg.from_first_name || 'User'}</span>
+                        <span class="cached-message-user">${msg.from_first_name || 'User'} ${msg.chat_title ? `(${msg.chat_title})` : `[${msg.chat_id}]`}</span>
                         <div style="display:flex;gap:5px;">
                             <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})'>😊</button>
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>

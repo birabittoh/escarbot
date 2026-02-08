@@ -41,6 +41,7 @@ type EscarBot struct {
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
 	ChatID             int64                    `json:"chat_id"`
+	ChatTitle          string                   `json:"chat_title,omitempty"`
 	FromUsername       string                   `json:"from_username"`
 	FromFirstName      string                   `json:"from_first_name"`
 	Text               string                   `json:"text"`
