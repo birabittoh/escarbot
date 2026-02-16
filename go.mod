@@ -8,3 +8,5 @@ require (
 )
 
 require github.com/gorilla/websocket v1.5.3
+
+require github.com/birabittoh/captcha v1.0.1

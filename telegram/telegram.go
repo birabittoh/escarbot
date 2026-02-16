@@ -19,6 +19,9 @@ type EscarBot struct {
 	ChannelForward     bool
 	AdminForward       bool
 	AutoBan            bool
+	Captcha            bool
+	CaptchaTimeout     int
+	CaptchaMaxRetries  int
 	WelcomeMessage     bool
 	ChannelID          int64
 	GroupID            int64
@@ -35,6 +38,8 @@ type EscarBot struct {
 	WelcomeLinks       string
 	WelcomePhoto       string
 	EnabledReplacers   map[string]bool
+	PendingCaptchas    map[int64]*PendingCaptcha
+	CaptchaMutex       sync.Mutex
 }
 
 // CachedMessage represents a message stored in cache
@@ -149,6 +154,23 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	channelForward := getBoolEnv("CHANNEL_FORWARD", true)
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
+	captcha := getBoolEnv("CAPTCHA", false) // Default to false
+	captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT")
+	captchaTimeout := 120
+	if captchaTimeoutStr != "" {
+		if val, err := strconv.Atoi(captchaTimeoutStr); err == nil {
+			captchaTimeout = val
+		}
+	}
+
+	captchaMaxRetriesStr := os.Getenv("CAPTCHA_MAX_RETRIES")
+	captchaMaxRetries := 2
+	if captchaMaxRetriesStr != "" {
+		if val, err := strconv.Atoi(captchaMaxRetriesStr); err == nil {
+			captchaMaxRetries = val
+		}
+	}
+
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
 	// Initialize enabled replacers
@@ -168,6 +190,9 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		ChannelForward:     channelForward,
 		AdminForward:       adminForward,
 		AutoBan:            autoBan,
+		Captcha:            captcha,
+		CaptchaTimeout:     captchaTimeout,
+		CaptchaMaxRetries:  captchaMaxRetries,
 		WelcomeMessage:     welcomeMessage,
 		ChannelID:          channelIdInt,
 		GroupID:            groupIdInt,
@@ -181,6 +206,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
 		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
 		EnabledReplacers:   enabledReplacers,
+		PendingCaptchas:    make(map[int64]*PendingCaptcha),
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
@@ -227,6 +253,9 @@ func BotPoll(escarbot *EscarBot) {
 			if adminForward {
 				forwardToAdmin(escarbot, msg)
 			}
+		}
+		if update.CallbackQuery != nil {
+			HandleCaptchaCallback(escarbot, update.CallbackQuery)
 		}
 		if update.ChannelPost != nil { // If we got a channel post
 			if channelForward {
