@@ -1,5 +1,7 @@
 github.com/OvyFlash/telegram-bot-api v0.0.0-20251112155921-e82db5fd534b h1:vC+cZNbleRsR1busnocKwnZ3Hm9Bp37QeWH81Dz91g8=
 github.com/OvyFlash/telegram-bot-api v0.0.0-20251112155921-e82db5fd534b/go.mod h1:2nRUdsKyWhvezqW/rBGWEQdcTQeTtnbSNd2dgx76WYA=
+github.com/birabittoh/captcha v1.0.1 h1:Xi1j5ldq9ero9wKCCxYl6b7jlRCu7k1uMqBrMOcKOAU=
+github.com/birabittoh/captcha v1.0.1/go.mod h1:8K4cH/GjfMDz7w68mVEf2/Whu/gXLAeWk/Uph2evuZ8=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=

@@ -34,10 +34,8 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 
 		escarbot.StateMutex.RLock()
 		autoBan := escarbot.AutoBan
+		captcha := escarbot.Captcha
 		welcomeMessage := escarbot.WelcomeMessage
-		welcomeLinks := escarbot.WelcomeLinks
-		welcomePhoto := escarbot.WelcomePhoto
-		welcomeText := escarbot.WelcomeText
 		escarbot.StateMutex.RUnlock()
 
 		// Check user's personal channel
@@ -59,50 +57,65 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 			continue
 		}
 
+		if captcha {
+			SendCaptcha(escarbot, message.Chat.ID, user, message.MessageID)
+			continue
+		}
+
 		if !welcomeMessage {
 			continue
 		}
 
-		// Send welcome message
-		links := strings.Split(welcomeLinks, "\n")
-		var buttons [][]tgbotapi.InlineKeyboardButton
-		for _, line := range links {
-			parts := strings.SplitN(line, "|", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			text := parts[0]
-			url := replacePlaceholders(escarbot, parts[1], user)
-			button := tgbotapi.NewInlineKeyboardButtonURL(text, url)
-			buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(button))
-		}
+		sendWelcomeMessage(escarbot, message.Chat.ID, user)
+	}
+}
 
-		var welcomeMsg tgbotapi.Chattable
-		if welcomePhoto == "" {
-			msg := tgbotapi.NewMessage(message.Chat.ID, replacePlaceholders(escarbot, welcomeText, user))
-			msg.ParseMode = "Markdown"
-			if len(buttons) > 0 {
-				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
-			}
-			welcomeMsg = msg
-		} else if welcomeText != "" {
-			photo := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileURL(welcomePhoto))
-			photo.Caption = replacePlaceholders(escarbot, welcomeText, user)
-			photo.ParseMode = "Markdown"
-			if len(buttons) > 0 {
-				photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
-			}
-			welcomeMsg = photo
-		} else {
+func sendWelcomeMessage(escarbot *EscarBot, chatID int64, user tgbotapi.User) {
+	escarbot.StateMutex.RLock()
+	welcomeLinks := escarbot.WelcomeLinks
+	welcomePhoto := escarbot.WelcomePhoto
+	welcomeText := escarbot.WelcomeText
+	escarbot.StateMutex.RUnlock()
+
+	// Send welcome message
+	links := strings.Split(welcomeLinks, "\n")
+	var buttons [][]tgbotapi.InlineKeyboardButton
+	for _, line := range links {
+		parts := strings.SplitN(line, "|", 2)
+		if len(parts) != 2 {
 			continue
 		}
+		text := parts[0]
+		url := replacePlaceholders(escarbot, parts[1], user)
+		button := tgbotapi.NewInlineKeyboardButtonURL(text, url)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(button))
+	}
 
-		_, err := escarbot.Bot.Send(welcomeMsg)
-		if err != nil {
-			log.Printf("Error sending welcome message to user %d: %v", user.ID, err)
-		} else {
-			log.Printf("Welcome message sent to user %d", user.ID)
+	var welcomeMsg tgbotapi.Chattable
+	if welcomePhoto == "" {
+		msg := tgbotapi.NewMessage(chatID, replacePlaceholders(escarbot, welcomeText, user))
+		msg.ParseMode = "Markdown"
+		if len(buttons) > 0 {
+			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 		}
+		welcomeMsg = msg
+	} else if welcomeText != "" {
+		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(welcomePhoto))
+		photo.Caption = replacePlaceholders(escarbot, welcomeText, user)
+		photo.ParseMode = "Markdown"
+		if len(buttons) > 0 {
+			photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
+		}
+		welcomeMsg = photo
+	} else {
+		return
+	}
+
+	_, err := escarbot.Bot.Send(welcomeMsg)
+	if err != nil {
+		log.Printf("Error sending welcome message to user %d: %v", user.ID, err)
+	} else {
+		log.Printf("Welcome message sent to user %d", user.ID)
 	}
 }
 

@@ -542,6 +542,18 @@
                     </div>
                 </div>
 
+                <div class="feature-item" id="feature-captcha" onclick="showSettings('captcha')">
+                    <div class="feature-info">
+                        <span class="feature-name">Captcha</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="captchaToggle" onchange="toggleFeature('captchaToggle', '/setCaptcha')"{{ if .Captcha }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="feature-item" id="feature-welcome" onclick="showSettings('welcome')">
                     <div class="feature-info">
                         <span class="feature-name">Welcome message</span>
@@ -638,6 +650,14 @@
                         </div>
                     </form>
                 </div>
+
+                <!-- Captcha Settings -->
+                <div class="settings-panel" id="settings-captcha">
+                    <div class="card-title">Captcha settings</div>
+                    <p style="margin-bottom: 20px; color: #9ca3af;">When enabled, new users must solve a 4-digit captcha within 120 seconds.</p>
+                    <p style="color: #9ca3af;">Failure to solve the captcha results in a ban, similar to auto-ban.</p>
+                </div>
+
 
                 <!-- Welcome Message Settings -->
                 <div class="settings-panel" id="settings-welcome">

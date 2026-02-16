@@ -100,6 +100,15 @@ func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
+func captchaHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
+		bot.Captcha = toggleBotProperty(w, r)
+		UpdateBoolEnvVar("CAPTCHA", bot.Captcha)
+	}
+}
+
 func welcomeMessageHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
@@ -304,6 +313,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setChannelForward", channelForwardHandler(bot))
 	r.HandleFunc("/setAdminForward", adminForwardHandler(bot))
 	r.HandleFunc("/setAutoBan", autoBanHandler(bot))
+	r.HandleFunc("/setCaptcha", captchaHandler(bot))
 	r.HandleFunc("/setWelcomeMessage", welcomeMessageHandler(bot))
 	r.HandleFunc("/setWelcomeContent", welcomeContentHandler(bot))
 	r.HandleFunc("/setChannel", channelHandler(bot))
