@@ -105,6 +105,13 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 	log.Printf("Captcha sent to user %d in chat %d, answer: %s", user.ID, chatID, answerStr)
 }
 
+func isUserPendingCaptcha(escarbot *EscarBot, userID int64) bool {
+	escarbot.CaptchaMutex.RLock()
+	defer escarbot.CaptchaMutex.RUnlock()
+	_, exists := escarbot.PendingCaptchas[userID]
+	return exists
+}
+
 func handleCaptchaTimeout(escarbot *EscarBot, userID int64) {
 	escarbot.CaptchaMutex.Lock()
 	pending, exists := escarbot.PendingCaptchas[userID]

@@ -39,7 +39,7 @@ type EscarBot struct {
 	WelcomePhoto       string
 	EnabledReplacers   map[string]bool
 	PendingCaptchas    map[int64]*PendingCaptcha
-	CaptchaMutex       sync.Mutex
+	CaptchaMutex       sync.RWMutex
 }
 
 // CachedMessage represents a message stored in cache
@@ -243,6 +243,19 @@ func BotPoll(escarbot *EscarBot) {
 
 		msg := update.Message
 		if msg != nil { // If we got a message
+			escarbot.StateMutex.RLock()
+			captchaEnabled := escarbot.Captcha
+			groupID := escarbot.GroupID
+			escarbot.StateMutex.RUnlock()
+
+			// If captcha is enabled, delete messages from users who haven't completed it yet
+			if captchaEnabled && msg.Chat.ID == groupID && msg.From != nil && msg.NewChatMembers == nil && msg.LeftChatMember == nil {
+				if isUserPendingCaptcha(escarbot, msg.From.ID) {
+					deleteMessages(escarbot, msg.Chat.ID, msg.MessageID)
+					continue
+				}
+			}
+
 			addMessageToCache(escarbot, msg)
 
 			handleNewChatMembers(escarbot, msg)
