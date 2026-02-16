@@ -20,6 +20,8 @@ type EscarBot struct {
 	AdminForward       bool
 	AutoBan            bool
 	Captcha            bool
+	CaptchaTimeout     int
+	CaptchaMaxRetries  int
 	WelcomeMessage     bool
 	ChannelID          int64
 	GroupID            int64
@@ -153,6 +155,22 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
 	captcha := getBoolEnv("CAPTCHA", false) // Default to false
+	captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT")
+	captchaTimeout := 120
+	if captchaTimeoutStr != "" {
+		if val, err := strconv.Atoi(captchaTimeoutStr); err == nil {
+			captchaTimeout = val
+		}
+	}
+
+	captchaMaxRetriesStr := os.Getenv("CAPTCHA_MAX_RETRIES")
+	captchaMaxRetries := 2
+	if captchaMaxRetriesStr != "" {
+		if val, err := strconv.Atoi(captchaMaxRetriesStr); err == nil {
+			captchaMaxRetries = val
+		}
+	}
+
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
 	// Initialize enabled replacers
@@ -173,6 +191,8 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		AdminForward:       adminForward,
 		AutoBan:            autoBan,
 		Captcha:            captcha,
+		CaptchaTimeout:     captchaTimeout,
+		CaptchaMaxRetries:  captchaMaxRetries,
 		WelcomeMessage:     welcomeMessage,
 		ChannelID:          channelIdInt,
 		GroupID:            groupIdInt,

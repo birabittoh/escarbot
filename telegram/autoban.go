@@ -42,23 +42,14 @@ func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 		if autoBan && hasBannedContent(escarbot, user.ID) {
 			log.Printf("User %d (%s) has banned content in personal channel, proceeding with ban", user.ID, user.UserName)
 
-			// Ban user and revoke all their messages
-			banUser(escarbot, message.Chat, user)
-
-			// Delete Telegram's join message
-			deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, message.MessageID)
-			_, err := escarbot.Bot.Request(deleteMsg)
-			if err != nil {
-				log.Printf("Error deleting join message: %v", err)
-			} else {
-				log.Printf("Join message deleted (chat %d)", message.Chat.ID)
-			}
+			// Ban user and cleanup join message
+			banAndCleanup(escarbot, message.Chat.ID, user, message.MessageID)
 
 			continue
 		}
 
 		if captcha {
-			SendCaptcha(escarbot, message.Chat.ID, user, message.MessageID)
+			SendCaptcha(escarbot, message.Chat.ID, user, message.MessageID, 0)
 			continue
 		}
 
@@ -155,11 +146,11 @@ func hasBannedContent(escarbot *EscarBot, userID int64) bool {
 }
 
 // banUser bans a user from the group
-func banUser(escarbot *EscarBot, chat tgbotapi.Chat, user tgbotapi.User) {
+func banUser(escarbot *EscarBot, chatID int64, user tgbotapi.User) {
 	banConfig := tgbotapi.BanChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
 			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: chat.ID,
+				ChatID: chatID,
 			},
 			UserID: user.ID,
 		},
@@ -189,6 +180,26 @@ func banUser(escarbot *EscarBot, chat tgbotapi.Chat, user tgbotapi.User) {
 	if err != nil {
 		log.Printf("Error sending ban log message: %v", err)
 	}
+}
+
+// deleteMessages deletes multiple messages from a chat
+func deleteMessages(escarbot *EscarBot, chatID int64, messageIDs ...int) {
+	for _, id := range messageIDs {
+		if id == 0 {
+			continue
+		}
+		deleteMsg := tgbotapi.NewDeleteMessage(chatID, id)
+		_, err := escarbot.Bot.Request(deleteMsg)
+		if err != nil {
+			log.Printf("Error deleting message %d in chat %d: %v", id, chatID, err)
+		}
+	}
+}
+
+// banAndCleanup bans a user and deletes relevant messages
+func banAndCleanup(escarbot *EscarBot, chatID int64, user tgbotapi.User, messageIDs ...int) {
+	banUser(escarbot, chatID, user)
+	deleteMessages(escarbot, chatID, messageIDs...)
 }
 
 // addMessageToCache adds a message to cache for future searches

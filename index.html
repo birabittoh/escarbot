@@ -654,8 +654,22 @@
                 <!-- Captcha Settings -->
                 <div class="settings-panel" id="settings-captcha">
                     <div class="card-title">Captcha settings</div>
-                    <p style="margin-bottom: 20px; color: #9ca3af;">When enabled, new users must solve a 4-digit captcha within 120 seconds.</p>
-                    <p style="color: #9ca3af;">Failure to solve the captcha results in a ban, similar to auto-ban.</p>
+                    <form onsubmit="updateCaptchaConfig(event)">
+                        <div class="input-group">
+                            <label class="input-label" for="captchaTimeout">Timeout (seconds)</label>
+                            <input type="text" id="captchaTimeout" name="timeout" value="{{ .CaptchaTimeout }}" placeholder="120" required>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="captchaMaxRetries">Max retries</label>
+                            <input type="text" id="captchaMaxRetries" name="maxRetries" value="{{ .CaptchaMaxRetries }}" placeholder="2" required>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit">Save</button>
+                        </div>
+                    </form>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <p style="margin-bottom: 20px; color: #9ca3af;">When enabled, new users must solve a 4-digit captcha within the specified timeout.</p>
+                    <p style="color: #9ca3af;">Failure to solve the captcha (including exhausting retries) results in a ban, similar to auto-ban.</p>
                 </div>
 
 
@@ -807,6 +821,28 @@
             }).catch(err => {
                 console.error('Error:', err);
                 checkbox.checked = !checkbox.checked;
+            });
+        }
+
+        // --- Captcha Config ---
+        function updateCaptchaConfig(event) {
+            event.preventDefault();
+            const timeout = document.getElementById('captchaTimeout').value;
+            const maxRetries = document.getElementById('captchaMaxRetries').value;
+            const params = new URLSearchParams();
+            params.append('timeout', timeout);
+            params.append('maxRetries', maxRetries);
+
+            const btn = event.target.querySelector('button');
+            const originalText = btn.textContent;
+
+            fetch('/setCaptchaConfig', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).then(() => {
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 2000);
             });
         }
 
