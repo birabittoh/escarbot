@@ -115,6 +115,7 @@ func captchaConfigHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 		timeoutStr := r.Form.Get("timeout")
 		maxRetriesStr := r.Form.Get("maxRetries")
+		captchaText := r.Form.Get("captchaText")
 
 		bot.StateMutex.Lock()
 		if val, err := strconv.Atoi(timeoutStr); err == nil {
@@ -125,6 +126,8 @@ func captchaConfigHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			bot.CaptchaMaxRetries = val
 			UpdateEnvVar("CAPTCHA_MAX_RETRIES", maxRetriesStr)
 		}
+		bot.CaptchaText = captchaText
+		UpdateEnvVar("CAPTCHA_TEXT", captchaText)
 		bot.StateMutex.Unlock()
 	}
 }

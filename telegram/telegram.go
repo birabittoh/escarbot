@@ -38,6 +38,7 @@ type EscarBot struct {
 	WelcomeText        string
 	WelcomeLinks       string
 	WelcomePhoto       string
+	CaptchaText        string
 	EnabledReplacers   map[string]bool
 	PendingCaptchas    map[int64]*PendingCaptcha
 	CaptchaMutex       sync.RWMutex
@@ -208,6 +209,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		WelcomeText:        os.Getenv("WELCOME_TEXT"),
 		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
 		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
+		CaptchaText:        os.Getenv("CAPTCHA_TEXT"),
 		EnabledReplacers:   enabledReplacers,
 		PendingCaptchas:    make(map[int64]*PendingCaptcha),
 		JoinProcessedCache: make(map[int64]time.Time),
