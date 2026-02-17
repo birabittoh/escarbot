@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
@@ -40,6 +41,8 @@ type EscarBot struct {
 	EnabledReplacers   map[string]bool
 	PendingCaptchas    map[int64]*PendingCaptcha
 	CaptchaMutex       sync.RWMutex
+	JoinProcessedCache map[int64]time.Time
+	JoinCacheMutex     sync.Mutex
 }
 
 // CachedMessage represents a message stored in cache
@@ -207,6 +210,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
 		EnabledReplacers:   enabledReplacers,
 		PendingCaptchas:    make(map[int64]*PendingCaptcha),
+		JoinProcessedCache: make(map[int64]time.Time),
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
@@ -230,6 +234,7 @@ func BotPoll(escarbot *EscarBot) {
 	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
+	u.AllowedUpdates = []string{"message", "callback_query", "channel_post", "chat_member"}
 
 	bot := escarbot.Bot
 	updates := bot.GetUpdatesChan(u)
@@ -269,6 +274,9 @@ func BotPoll(escarbot *EscarBot) {
 		}
 		if update.CallbackQuery != nil {
 			HandleCaptchaCallback(escarbot, update.CallbackQuery)
+		}
+		if update.ChatMember != nil {
+			handleChatMemberUpdate(escarbot, update.ChatMember)
 		}
 		if update.ChannelPost != nil { // If we got a channel post
 			if channelForward {
