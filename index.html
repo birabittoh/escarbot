@@ -217,6 +217,18 @@
             margin-bottom: 20px;
         }
 
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .input-label {
             display: block;
             margin-bottom: 8px;
@@ -654,14 +666,23 @@
                 <!-- Captcha Settings -->
                 <div class="settings-panel" id="settings-captcha">
                     <div class="card-title">Captcha settings</div>
+                    <div class="placeholder-info">
+                        <strong>Placeholders:</strong> <code>{USER_NAME}</code>, <code>{USER_ID}</code>, <code>{GROUP_ID}</code>, <code>{TIMEOUT}</code>
+                    </div>
                     <form onsubmit="updateCaptchaConfig(event)">
                         <div class="input-group">
-                            <label class="input-label" for="captchaTimeout">Timeout (seconds)</label>
-                            <input type="text" id="captchaTimeout" name="timeout" value="{{ .CaptchaTimeout }}" placeholder="120" required>
+                            <label class="input-label" for="captchaText">Captcha text (Markdown)</label>
+                            <textarea id="captchaText" name="captchaText" placeholder="Enter captcha message...">{{ .CaptchaText }}</textarea>
                         </div>
-                        <div class="input-group">
-                            <label class="input-label" for="captchaMaxRetries">Max retries</label>
-                            <input type="text" id="captchaMaxRetries" name="maxRetries" value="{{ .CaptchaMaxRetries }}" placeholder="2" required>
+                        <div class="input-grid">
+                            <div class="input-group">
+                                <label class="input-label" for="captchaTimeout">Timeout (seconds)</label>
+                                <input type="text" id="captchaTimeout" name="timeout" value="{{ .CaptchaTimeout }}" placeholder="120" required>
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label" for="captchaMaxRetries">Max retries</label>
+                                <input type="text" id="captchaMaxRetries" name="maxRetries" value="{{ .CaptchaMaxRetries }}" placeholder="2" required>
+                            </div>
                         </div>
                         <div class="button-group">
                             <button type="submit">Save</button>
@@ -715,7 +736,7 @@
                         <textarea id="customMessage" name="customMessage" placeholder="Enter your message here..." required></textarea>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-grid">
                         <div class="input-group">
                             <label class="input-label" for="recipientId">Recipient ID</label>
                             <div style="display: flex; gap: 5px;">
@@ -734,7 +755,7 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="input-grid">
                         <div class="input-group">
                             <label class="input-label" for="threadId">Thread ID</label>
                             <div style="display: flex; gap: 5px;">
@@ -829,9 +850,11 @@
             event.preventDefault();
             const timeout = document.getElementById('captchaTimeout').value;
             const maxRetries = document.getElementById('captchaMaxRetries').value;
+            const captchaText = document.getElementById('captchaText').value;
             const params = new URLSearchParams();
             params.append('timeout', timeout);
             params.append('maxRetries', maxRetries);
+            params.append('captchaText', captchaText);
 
             const btn = event.target.querySelector('button');
             const originalText = btn.textContent;
