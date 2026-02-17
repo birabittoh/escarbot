@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
@@ -20,45 +21,95 @@ func replacePlaceholders(escarbot *EscarBot, text string, user tgbotapi.User) st
 	return replaced
 }
 
-// handleNewChatMembers handles new members joining the group
+// handleNewChatMembers handles new members joining the group via service message
 func handleNewChatMembers(escarbot *EscarBot, message *tgbotapi.Message) {
 	if message.NewChatMembers == nil {
 		return
 	}
 
 	for _, user := range message.NewChatMembers {
-		// Ignore bots
-		if user.IsBot {
-			continue
-		}
-
-		escarbot.StateMutex.RLock()
-		autoBan := escarbot.AutoBan
-		captcha := escarbot.Captcha
-		welcomeMessage := escarbot.WelcomeMessage
-		escarbot.StateMutex.RUnlock()
-
-		// Check user's personal channel
-		if autoBan && hasBannedContent(escarbot, user.ID) {
-			log.Printf("User %d (%s) has banned content in personal channel, proceeding with ban", user.ID, user.UserName)
-
-			// Ban user and cleanup join message
-			banAndCleanup(escarbot, message.Chat.ID, user, message.MessageID)
-
-			continue
-		}
-
-		if captcha {
-			SendCaptcha(escarbot, message.Chat.ID, user, message.MessageID, 0)
-			continue
-		}
-
-		if !welcomeMessage {
-			continue
-		}
-
-		sendWelcomeMessage(escarbot, message.Chat.ID, user)
+		processJoin(escarbot, message.Chat.ID, user, message.MessageID)
 	}
+}
+
+// handleChatMemberUpdate handles updates to a chat member's status
+func handleChatMemberUpdate(escarbot *EscarBot, update *tgbotapi.ChatMemberUpdated) {
+	// We only care about users joining the group
+	// Status change from (left/kicked) to member/restricted
+	oldStatus := update.OldChatMember.Status
+	newStatus := update.NewChatMember.Status
+
+	isJoining := (oldStatus == "left" || oldStatus == "kicked") &&
+		(newStatus == "member" || newStatus == "restricted")
+
+	if isJoining && update.NewChatMember.User != nil {
+		log.Printf("User %d joined chat %d (detected via ChatMemberUpdated)", update.NewChatMember.User.ID, update.Chat.ID)
+		processJoin(escarbot, update.Chat.ID, *update.NewChatMember.User, 0)
+	}
+}
+
+// processJoin handles a user joining the group
+func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID int) {
+	// Ignore bots
+	if user.IsBot {
+		return
+	}
+
+	// De-duplication logic
+	escarbot.JoinCacheMutex.Lock()
+	// Cleanup old entries (older than 1 minute) periodically
+	// We do it here for simplicity
+	for id, t := range escarbot.JoinProcessedCache {
+		if time.Since(t) > 1*time.Minute {
+			delete(escarbot.JoinProcessedCache, id)
+		}
+	}
+
+	lastProcessed, exists := escarbot.JoinProcessedCache[user.ID]
+	// If processed in the last 10 seconds, it's a duplicate
+	if exists && time.Since(lastProcessed) < 10*time.Second {
+		escarbot.JoinCacheMutex.Unlock()
+
+		// Even if it's a duplicate, we might want to update the joinMsgID for captcha
+		escarbot.CaptchaMutex.Lock()
+		if pending, ok := escarbot.PendingCaptchas[user.ID]; ok {
+			if joinMsgID != 0 && pending.JoinMsgID == 0 {
+				pending.JoinMsgID = joinMsgID
+				log.Printf("Updated JoinMsgID for user %d in PendingCaptchas", user.ID)
+			}
+		}
+		escarbot.CaptchaMutex.Unlock()
+		return
+	}
+	escarbot.JoinProcessedCache[user.ID] = time.Now()
+	escarbot.JoinCacheMutex.Unlock()
+
+	escarbot.StateMutex.RLock()
+	autoBan := escarbot.AutoBan
+	captcha := escarbot.Captcha
+	welcomeMessage := escarbot.WelcomeMessage
+	escarbot.StateMutex.RUnlock()
+
+	// Check user's personal channel
+	if autoBan && hasBannedContent(escarbot, user.ID) {
+		log.Printf("User %d (%s) has banned content in personal channel, proceeding with ban", user.ID, user.UserName)
+
+		// Ban user and cleanup join message
+		banAndCleanup(escarbot, chatID, user, joinMsgID)
+
+		return
+	}
+
+	if captcha {
+		SendCaptcha(escarbot, chatID, user, joinMsgID, 0)
+		return
+	}
+
+	if !welcomeMessage {
+		return
+	}
+
+	sendWelcomeMessage(escarbot, chatID, user)
 }
 
 func sendWelcomeMessage(escarbot *EscarBot, chatID int64, user tgbotapi.User) {
