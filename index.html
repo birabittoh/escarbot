@@ -249,6 +249,12 @@
             font-family: inherit;
         }
 
+        #captchaText, #welcomeText, #customMessage {
+            resize: vertical;
+            min-height: 80px;
+            max-height: 400px;
+        }
+
         input[type="text"]:focus, textarea:focus, select:focus {
             outline: none;
             border-color: #8b5cf6;
@@ -1073,6 +1079,9 @@
             document.getElementById('recipientId').value = msg.chat_id;
             document.getElementById('replyToMessageId').value = msg.message_id;
             document.getElementById('threadId').value = msg.is_topic_message ? msg.thread_id : '';
+
+            // Focus message box
+            document.getElementById('customMessage').focus();
 
             // Visual feedback
             const btn = document.getElementById('customMessageButton');
