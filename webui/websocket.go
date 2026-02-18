@@ -60,13 +60,6 @@ func (h *MessageHub) run() {
 
 		case message := <-h.broadcast:
 			h.mu.Lock()
-			// Truncate long messages
-			if len(message.Text) > 100 {
-				message.Text = message.Text[:100] + "..."
-			}
-			if len(message.Caption) > 100 {
-				message.Caption = message.Caption[:100] + "..."
-			}
 			for conn := range h.clients {
 				err := conn.WriteJSON(message)
 				if err != nil {

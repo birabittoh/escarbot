@@ -46,6 +46,13 @@ type EscarBot struct {
 	JoinCacheMutex     sync.Mutex
 }
 
+// MessageHistory represents a previous version of a message
+type MessageHistory struct {
+	Text     string `json:"text"`
+	Caption  string `json:"caption,omitempty"`
+	EditDate int    `json:"edit_date"`
+}
+
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
@@ -62,6 +69,7 @@ type CachedMessage struct {
 	IsTopicMessage     bool                     `json:"is_topic_message"`
 	AvailableReactions []string                 `json:"available_reactions,omitempty"`
 	Reactions          []tgbotapi.ReactionCount `json:"reactions,omitempty"`
+	History            []MessageHistory         `json:"history,omitempty"`
 }
 
 // getAvailableReactions returns the available reactions for a chat
@@ -239,7 +247,7 @@ func BotPoll(escarbot *EscarBot) {
 	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	u.AllowedUpdates = []string{"message", "callback_query", "channel_post", "chat_member"}
+	u.AllowedUpdates = []string{"message", "callback_query", "channel_post", "chat_member", "edited_message", "edited_channel_post", "message_reaction", "message_reaction_count"}
 
 	bot := escarbot.Bot
 	updates := bot.GetUpdatesChan(u)
@@ -284,9 +292,19 @@ func BotPoll(escarbot *EscarBot) {
 			handleChatMemberUpdate(escarbot, update.ChatMember)
 		}
 		if update.ChannelPost != nil { // If we got a channel post
+			addMessageToCache(escarbot, update.ChannelPost)
 			if channelForward {
 				channelPostHandler(escarbot, update.ChannelPost)
 			}
+		}
+		if update.EditedMessage != nil {
+			updateMessageInCache(escarbot, update.EditedMessage)
+		}
+		if update.EditedChannelPost != nil {
+			updateMessageInCache(escarbot, update.EditedChannelPost)
+		}
+		if update.MessageReactionCount != nil {
+			updateReactionsInCache(escarbot, update.MessageReactionCount)
 		}
 	}
 }

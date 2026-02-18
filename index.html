@@ -815,7 +815,7 @@
 
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
-        let messageCache = [];
+        window.messageCache = [];
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
         // --- UI Switching ---
@@ -1048,33 +1048,52 @@
         });
 
         // --- WebSocket & Cache ---
+        function truncate(str, len = 100) {
+            if (!str) return str;
+            return str.length > len ? str.substring(0, len) + "..." : str;
+        }
+
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
             ws.onopen = () => fetch('/api/messageCache').then(r => r.json()).then(msgs => {
-                messageCache = msgs;
+                window.messageCache = msgs;
                 renderMessages();
             });
 
             ws.onmessage = (e) => {
-                messageCache.unshift(JSON.parse(e.data));
-                if(messageCache.length > 100) messageCache.pop();
+                const newMsg = JSON.parse(e.data);
+
+                // Use string comparison to handle potential large integer issues or type mismatches
+                const index = window.messageCache.findIndex(m =>
+                    String(m.message_id) === String(newMsg.message_id) &&
+                    String(m.chat_id) === String(newMsg.chat_id)
+                );
+
+                if (index !== -1) {
+                    // Remove old version so the updated one moves to the top
+                    window.messageCache.splice(index, 1);
+                }
+
+                window.messageCache.unshift(newMsg);
+                if(window.messageCache.length > 100) window.messageCache.pop();
+
                 renderMessages();
             };
 
             ws.onclose = () => setTimeout(connectWebSocket, 3000);
         }
 
-        function renderMessages() {
+        window.renderMessages = function() {
             const container = document.getElementById('messageCache');
-            if(messageCache.length === 0) {
+            if(window.messageCache.length === 0) {
                 container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No messages yet</div>';
                 return;
             }
 
-            container.innerHTML = messageCache.map(msg => `
-                <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
+            container.innerHTML = window.messageCache.map(msg => `
+                <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                         <span class="cached-message-user">${msg.from_first_name || 'User'} ${msg.chat_title ? `(${msg.chat_title})` : `[${msg.chat_id}]`}</span>
                         <div style="display:flex;gap:5px;">
@@ -1087,8 +1106,25 @@
                             <img src="${msg.media_url}" alt="${msg.media_type}">
                         </div>
                     ` : ''}
-                    <div class="cached-message-text">${msg.text || msg.caption || (msg.media_url ? '' : '<media>')}</div>
-                    <div style="margin-top:5px;">
+                    <div class="cached-message-text">${truncate(msg.text || msg.caption) || (msg.media_url ? '' : '<media>')}</div>
+
+                    ${msg.history && msg.history.length > 0 ? `
+                        <div class="message-history" style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;" onclick="event.stopPropagation()">
+                            <details>
+                                <summary style="cursor: pointer; color: #a78bfa; font-weight: 500;">Edit History (${msg.history.length})</summary>
+                                <div style="padding-left: 10px; margin-top: 5px; border-left: 2px solid rgba(139, 92, 246, 0.3);">
+                                    ${msg.history.map((h, idx) => `
+                                        <div style="margin-bottom: 6px;">
+                                            <div style="font-weight: 600; font-size: 0.65rem; color: #8b5cf6;">VERSION ${idx + 1}</div>
+                                            <div style="font-style: italic; color: #d1d5db;">${truncate(h.text || h.caption, 80)}</div>
+                                        </div>
+                                    `).reverse().join('')}
+                                </div>
+                            </details>
+                        </div>
+                    ` : ''}
+
+                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
                         ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
                     </div>
                 </div>
@@ -1137,7 +1173,7 @@
             });
             fetch(baseUrl + "setMessageReaction?" + params).then(r => r.json()).then(data => {
                 if(data.ok) {
-                    const msg = messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
+                    const msg = window.messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
                     if(msg) msg.reactions = [{type: {emoji}, total_count: 1}];
                     renderMessages();
                     closeReactionPicker();

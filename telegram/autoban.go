@@ -255,12 +255,19 @@ func banAndCleanup(escarbot *EscarBot, chatID int64, user tgbotapi.User, message
 
 // addMessageToCache adds a message to cache for future searches
 func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
-	if message == nil || message.From == nil {
+	if message == nil {
 		return
 	}
 
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
+
+	// Check if already in cache (avoid duplicates)
+	for _, msg := range escarbot.MessageCache {
+		if msg.MessageID == message.MessageID && msg.ChatID == message.Chat.ID {
+			return
+		}
+	}
 
 	// Get available reactions for this chat
 	reactions := getAvailableReactions(escarbot, message.Chat.ID)
@@ -268,6 +275,15 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	chatTitle := message.Chat.Title
 	if chatTitle == "" {
 		chatTitle = message.Chat.FirstName
+	}
+
+	fromUsername := ""
+	fromFirstName := "Channel"
+	if message.From != nil {
+		fromUsername = message.From.UserName
+		fromFirstName = message.From.FirstName
+	} else if message.SenderChat != nil {
+		fromFirstName = message.SenderChat.Title
 	}
 
 	var mediaURL, mediaType string
@@ -285,8 +301,8 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		MessageID:          message.MessageID,
 		ChatID:             message.Chat.ID,
 		ChatTitle:          chatTitle,
-		FromUsername:       message.From.UserName,
-		FromFirstName:      message.From.FirstName,
+		FromUsername:       fromUsername,
+		FromFirstName:      fromFirstName,
 		Text:               message.Text,
 		Caption:            message.Caption,
 		MediaURL:           mediaURL,
@@ -309,5 +325,64 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	// Broadcast message if callback is set
 	if escarbot.OnMessageCached != nil {
 		escarbot.OnMessageCached(cached)
+	}
+}
+
+// updateMessageInCache updates an existing message in the cache with its new content and saves history
+func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
+	if message == nil {
+		return
+	}
+
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	for i, msg := range escarbot.MessageCache {
+		if msg.MessageID == message.MessageID && msg.ChatID == message.Chat.ID {
+			// Save current state to history
+			historyItem := MessageHistory{
+				Text:     msg.Text,
+				Caption:  msg.Caption,
+				EditDate: message.EditDate,
+			}
+			escarbot.MessageCache[i].History = append(escarbot.MessageCache[i].History, historyItem)
+
+			// Update content
+			escarbot.MessageCache[i].Text = message.Text
+			escarbot.MessageCache[i].Caption = message.Caption
+			escarbot.MessageCache[i].Entities = message.Entities
+
+			// Broadcast update
+			if escarbot.OnMessageCached != nil {
+				escarbot.OnMessageCached(escarbot.MessageCache[i])
+			}
+			return
+		}
+	}
+	// If not in cache, add it as new (though we won't have history)
+	addMessageToCache(escarbot, message)
+}
+
+// updateReactionsInCache updates reaction counts for a cached message
+func updateReactionsInCache(escarbot *EscarBot, update *tgbotapi.MessageReactionCountUpdated) {
+	if update == nil {
+		return
+	}
+
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	for i, msg := range escarbot.MessageCache {
+		if msg.MessageID == update.MessageID && msg.ChatID == update.Chat.ID {
+			escarbot.MessageCache[i].Reactions = update.Reactions
+
+			log.Printf("Updated reactions for message %d in cache", update.MessageID)
+
+			// Broadcast update
+			if escarbot.OnMessageCached != nil {
+				escarbot.OnMessageCached(escarbot.MessageCache[i])
+			}
+			return
+		}
 	}
 }
