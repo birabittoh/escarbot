@@ -3,6 +3,8 @@ package webui
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -270,6 +272,9 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			if len(msg.Text) > 100 {
 				msg.Text = msg.Text[:100] + "..."
 			}
+			if len(msg.Caption) > 100 {
+				msg.Caption = msg.Caption[:100] + "..."
+			}
 			response[i] = msg
 		}
 
@@ -319,6 +324,53 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
+func mediaHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fileID := r.URL.Query().Get("file_id")
+		if fileID == "" {
+			http.Error(w, "Missing file_id", http.StatusBadRequest)
+			return
+		}
+
+		// Get file path from Telegram
+		file, err := bot.Bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
+		if err != nil {
+			log.Printf("Error getting file info: %v", err)
+			http.Error(w, "Error getting file info", http.StatusInternalServerError)
+			return
+		}
+
+		// Construct direct URL
+		directURL, err := bot.Bot.GetFileDirectURL(file.FileID)
+		if err != nil {
+			log.Printf("Error getting direct URL: %v", err)
+			http.Error(w, "Error getting direct URL", http.StatusInternalServerError)
+			return
+		}
+
+		// Fetch the file and stream it back
+		resp, err := http.Get(directURL)
+		if err != nil {
+			log.Printf("Error fetching media: %v", err)
+			http.Error(w, "Error fetching media", http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			http.Error(w, fmt.Sprintf("Error fetching media from Telegram: status %d", resp.StatusCode), resp.StatusCode)
+			return
+		}
+
+		// Set headers
+		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+
+		// Copy body
+		io.Copy(w, resp.Body)
+	}
+}
+
 func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	// Initialize WebSocket hub
 	InitMessageHub()
@@ -346,6 +398,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setReplacer", replacerHandler(bot))
 	r.HandleFunc("/setBannedWords", bannedWordsHandler(bot))
 	r.HandleFunc("/api/messageCache", messageCacheHandler(bot))
+	r.HandleFunc("/api/media", mediaHandler(bot))
 	r.HandleFunc("/setReaction", setReactionHandler(bot))
 	r.HandleFunc("/ws", wsHandler)
 

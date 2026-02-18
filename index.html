@@ -495,6 +495,21 @@
             font-size: 0.8rem;
             margin-right: 4px;
         }
+
+        .cached-message-media {
+            display: flex;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .cached-message-media img {
+            max-height: 200px;
+            max-width: 100%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -1067,7 +1082,12 @@
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
                         </div>
                     </div>
-                    <div class="cached-message-text">${msg.text || '<media>'}</div>
+                    ${msg.media_url ? `
+                        <div class="cached-message-media">
+                            <img src="${msg.media_url}" alt="${msg.media_type}">
+                        </div>
+                    ` : ''}
+                    <div class="cached-message-text">${msg.text || msg.caption || (msg.media_url ? '' : '<media>')}</div>
                     <div style="margin-top:5px;">
                         ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
                     </div>

@@ -64,6 +64,9 @@ func (h *MessageHub) run() {
 			if len(message.Text) > 100 {
 				message.Text = message.Text[:100] + "..."
 			}
+			if len(message.Caption) > 100 {
+				message.Caption = message.Caption[:100] + "..."
+			}
 			for conn := range h.clients {
 				err := conn.WriteJSON(message)
 				if err != nil {
