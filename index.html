@@ -1118,12 +1118,13 @@
                 );
 
                 if (index !== -1) {
-                    // Remove old version so the updated one moves to the top
-                    window.messageCache.splice(index, 1);
+                    // Update in place to maintain arrival order
+                    window.messageCache[index] = newMsg;
+                } else {
+                    // New message, add to top
+                    window.messageCache.unshift(newMsg);
+                    if(window.messageCache.length > 100) window.messageCache.pop();
                 }
-
-                window.messageCache.unshift(newMsg);
-                if(window.messageCache.length > 100) window.messageCache.pop();
 
                 renderMessages();
             };
