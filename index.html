@@ -1170,15 +1170,21 @@
                         </div>
                     ` : ''}
 
-                    ${(msg.reactions || []).length > 0 ? `
-                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
-                        ${(msg.reactions || []).map(r => {
-                            const users = (msg.recent_reactions || []).filter(rr => rr.emoji === r.type.emoji).map(rr => escapeHTML(rr.user));
-                            const active = msg.bot_reaction === r.type.emoji;
-                            return `<div class="reaction-wrapper"><button class="reaction-count-btn${active ? ' bot-active' : ''}" onclick='event.stopPropagation(); handleReactionClick(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(r.type.emoji)}, ${JSON.stringify(msg.bot_reaction || "")})'>${r.type.emoji} ${r.total_count}</button>${users.length ? `<div class="reaction-tooltip">${users.join(', ')}</div>` : ''}</div>`;
-                        }).join('')}
-                    </div>
-                    ` : ''}
+                    ${(() => {
+                            // Prefer aggregate reaction counts; fall back to recent_reactions grouped by emoji
+                            let buttons = (msg.reactions || []).map(r => ({ emoji: r.type.emoji, count: r.total_count }));
+                            if (!buttons.length && msg.recent_reactions && msg.recent_reactions.length > 0) {
+                                const grouped = {};
+                                for (const r of msg.recent_reactions) { grouped[r.emoji] = (grouped[r.emoji] || 0) + 1; }
+                                buttons = Object.entries(grouped).map(([emoji, count]) => ({ emoji, count }));
+                            }
+                            if (!buttons.length) return '';
+                            return `<div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">${buttons.map(({emoji, count}) => {
+                                const users = (msg.recent_reactions || []).filter(rr => rr.emoji === emoji).map(rr => escapeHTML(rr.user));
+                                const active = msg.bot_reaction === emoji;
+                                return `<div class="reaction-wrapper"><button class="reaction-count-btn${active ? ' bot-active' : ''}" onclick='event.stopPropagation(); handleReactionClick(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(emoji)}, ${JSON.stringify(msg.bot_reaction || "")})'>${emoji} ${count}</button>${users.length ? `<div class="reaction-tooltip">${users.join(', ')}</div>` : ''}</div>`;
+                            }).join('')}</div>`;
+                        })()}
                 </div>
             `).join('');
         }
