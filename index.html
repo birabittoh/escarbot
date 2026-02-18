@@ -346,12 +346,87 @@
             }
         }
 
-        .message-cache {
+        .recent-messages-container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 0;
             background: rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            height: 550px;
+        }
+
+        @media (max-width: 768px) {
+            .recent-messages-container {
+                grid-template-columns: 1fr;
+                height: auto;
+                max-height: 1000px;
+            }
+        }
+
+        .chat-sidebar {
+            background: rgba(0, 0, 0, 0.15);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .chat-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-item.active {
+            background: rgba(139, 92, 246, 0.15);
+            border-left: 3px solid #8b5cf6;
+        }
+
+        .chat-propic {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #374151;
+            flex-shrink: 0;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-info-mini {
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .chat-name-mini {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e4e4e7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+        .chat-id-mini {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            font-family: monospace;
+        }
+
+        .message-cache {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
         }
 
         .cached-message {
@@ -836,8 +911,13 @@
 
                 <div>
                     <label class="input-label">Recent messages</label>
-                    <div class="message-cache" id="messageCache">
-                        <div class="no-messages" style="text-align: center; padding: 20px; color: #6b7280;">Loading messages...</div>
+                    <div class="recent-messages-container">
+                        <div class="chat-sidebar" id="chatSidebar">
+                            <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 0.8rem;">Loading chats...</div>
+                        </div>
+                        <div class="message-cache" id="messageCache">
+                            <div class="no-messages" style="text-align: center; padding: 20px; color: #6b7280;">Select a chat to view messages</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -853,7 +933,9 @@
 
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
-        window.messageCache = [];
+        window.messageCache = {};
+        window.chats = [];
+        window.selectedChatId = localStorage.getItem('selectedChatId');
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
         // --- UI Switching ---
@@ -1099,50 +1181,153 @@
             return str.length > len ? str.substring(0, len) + "..." : str;
         }
 
+        async function fetchCache() {
+            console.log('Fetching cache... Current selectedChatId:', window.selectedChatId);
+            try {
+                const [chats, msgs] = await Promise.all([
+                    fetch('/api/chats').then(r => r.json()),
+                    fetch('/api/messageCache').then(r => r.json())
+                ]);
+
+                console.log('Fetched chats:', chats);
+                console.log('Fetched msgs:', msgs);
+
+                window.chats = chats.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                window.messageCache = msgs;
+
+                // Restore selection from localStorage if possible
+                const savedId = localStorage.getItem('selectedChatId');
+                if (savedId) {
+                    window.selectedChatId = savedId;
+                }
+
+                const exists = window.chats.some(c => String(c.id) === window.selectedChatId);
+                console.log('Selected chat exists in chats:', exists);
+
+                // If no chat is selected, or selected chat doesn't exist anymore, select the first one
+                if (!window.selectedChatId || !exists) {
+                    if (window.chats.length > 0) {
+                        console.log('Selecting first chat:', window.chats[0].id);
+                        selectChat(window.chats[0].id);
+                    }
+                } else {
+                    console.log('Keeping selected chat:', window.selectedChatId);
+                    // Ensure it's in the Recipient ID field
+                    document.getElementById('recipientId').value = window.selectedChatId;
+                }
+
+                renderChats();
+                renderMessages();
+            } catch (err) {
+                console.error('Error fetching cache:', err);
+            }
+        }
+
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
-            ws.onopen = () => fetch('/api/messageCache').then(r => r.json()).then(msgs => {
-                window.messageCache = msgs;
-                renderMessages();
-            });
+            ws.onopen = () => {
+                fetchCache();
+            };
 
             ws.onmessage = (e) => {
                 const newMsg = JSON.parse(e.data);
+                const chatId = String(newMsg.chat_id);
 
-                // Use string comparison to handle potential large integer issues or type mismatches
-                const index = window.messageCache.findIndex(m =>
-                    String(m.message_id) === String(newMsg.message_id) &&
-                    String(m.chat_id) === String(newMsg.chat_id)
-                );
-
-                if (index !== -1) {
-                    // Update in place to maintain arrival order
-                    window.messageCache[index] = newMsg;
-                } else {
-                    // New message, add to top
-                    window.messageCache.unshift(newMsg);
-                    if(window.messageCache.length > 100) window.messageCache.pop();
+                if (!window.messageCache[chatId]) {
+                    window.messageCache[chatId] = [];
                 }
 
-                renderMessages();
+                const chatMsgs = window.messageCache[chatId];
+                const index = chatMsgs.findIndex(m => String(m.message_id) === String(newMsg.message_id));
+
+                if (index !== -1) {
+                    chatMsgs[index] = newMsg;
+                } else {
+                    chatMsgs.unshift(newMsg);
+                    if (chatMsgs.length > 100) chatMsgs.pop();
+
+                    // Update chat list if it's a new chat or update info
+                    const chatIndex = window.chats.findIndex(c => String(c.id) === String(chatId));
+                    if (chatIndex === -1) {
+                        window.chats.push({
+                            id: chatId,
+                            title: newMsg.chat_title,
+                            photo_url: newMsg.chat_photo_url
+                        });
+                        window.chats.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+
+                        // If no chat was selected, select this new one
+                        if (!window.selectedChatId) {
+                            selectChat(chatId);
+                        }
+
+                        renderChats();
+                    } else if (newMsg.chat_photo_url && !window.chats[chatIndex].photo_url) {
+                        window.chats[chatIndex].photo_url = newMsg.chat_photo_url;
+                        renderChats();
+                    }
+                }
+
+                if (chatId === window.selectedChatId) {
+                    renderMessages();
+                }
             };
 
             ws.onclose = () => setTimeout(connectWebSocket, 3000);
         }
 
-        window.renderMessages = function() {
-            const container = document.getElementById('messageCache');
-            if(window.messageCache.length === 0) {
-                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No messages yet</div>';
+        function renderChats() {
+            const sidebar = document.getElementById('chatSidebar');
+            if (window.chats.length === 0) {
+                sidebar.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;font-size:0.8rem;">No chats yet</div>';
                 return;
             }
 
-            container.innerHTML = window.messageCache.map(msg => `
+            sidebar.innerHTML = window.chats.map(chat => {
+                const chatIdStr = String(chat.id);
+                return `
+                    <div class="chat-item ${chatIdStr === window.selectedChatId ? 'active' : ''}" onclick="selectChat('${chatIdStr}')">
+                        <img class="chat-propic" src="${chat.photo_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(chat.title || 'C')}" alt="">
+                        <div class="chat-info-mini">
+                            <div class="chat-name-mini">${escapeHTML(chat.title || 'Unknown Chat')}</div>
+                            <div class="chat-id-mini">${chatIdStr}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectChat(chatId) {
+            window.selectedChatId = String(chatId);
+            localStorage.setItem('selectedChatId', window.selectedChatId);
+            // Update Recipient ID field
+            document.getElementById('recipientId').value = chatId;
+            renderChats();
+            renderMessages();
+        }
+
+        window.renderMessages = function() {
+            const container = document.getElementById('messageCache');
+            if (!window.selectedChatId) {
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">Select a chat to view messages</div>';
+                return;
+            }
+
+            const msgs = window.messageCache[window.selectedChatId] || [];
+            if (msgs.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No messages in this chat</div>';
+                return;
+            }
+
+            container.innerHTML = msgs.map(msg => `
                 <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                        <span class="cached-message-user">${escapeHTML(msg.from_first_name || 'User')} ${msg.chat_title ? `(${escapeHTML(msg.chat_title)})` : `[${msg.chat_id}]`}</span>
+                        <span class="cached-message-user">
+                            ${escapeHTML(msg.from_first_name || 'User')}
+                            ${msg.is_topic_message ? `<span style="color: #9ca3af; font-size: 0.8rem; font-weight: normal; margin-left: 5px;">#Thread ${msg.thread_id}</span>` : ''}
+                        </span>
                         <div style="display:flex;gap:5px;">
                             <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})'>😊</button>
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
@@ -1198,7 +1383,7 @@
         function selectMessage(msg) {
             document.getElementById('recipientId').value = msg.chat_id;
             document.getElementById('replyToMessageId').value = msg.message_id;
-            document.getElementById('threadId').value = msg.is_topic_message ? msg.thread_id : '';
+            document.getElementById('threadId').value = msg.thread_id || '';
 
             // Focus message box
             document.getElementById('customMessage').focus();
@@ -1246,9 +1431,11 @@
             const params = new URLSearchParams({ chat_id: chatId, message_id: msgId, emoji });
             fetch('/setReaction?' + params).then(r => r.json()).then(data => {
                 if (data.status === 'ok') {
-                    const msg = window.messageCache.find(m =>
-                        String(m.message_id) === String(msgId) && String(m.chat_id) === String(chatId));
-                    if (msg) msg.bot_reaction = emoji;
+                    const chatMsgs = window.messageCache[chatId];
+                    if (chatMsgs) {
+                        const msg = chatMsgs.find(m => String(m.message_id) === String(msgId));
+                        if (msg) msg.bot_reaction = emoji;
+                    }
                     renderMessages();
                 }
             });
@@ -1256,6 +1443,7 @@
 
         // Initialize
         showSettings('links');
+        fetchCache();
         connectWebSocket();
     </script>
 </body>

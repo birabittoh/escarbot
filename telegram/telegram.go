@@ -30,8 +30,10 @@ type EscarBot struct {
 	LogChannelID       int64
 	BannedWords        []string
 	AvailableReactions map[int64][]string
-	MessageCache       []CachedMessage
+	MessageCache       map[int64][]CachedMessage
+	ChatCache          map[int64]ChatInfo
 	CacheMutex         sync.Mutex
+	ReactionMutex      sync.Mutex
 	StateMutex         sync.RWMutex
 	MaxCacheSize       int
 	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
@@ -66,11 +68,19 @@ type ReactionDetail struct {
 	Emoji string `json:"emoji"`
 }
 
+// ChatInfo represents information about a Telegram chat
+type ChatInfo struct {
+	ID       int64  `json:"id,string"`
+	Title    string `json:"title"`
+	PhotoURL string `json:"photo_url,omitempty"`
+}
+
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
-	ChatID             int64                    `json:"chat_id"`
+	ChatID             int64                    `json:"chat_id,string"`
 	ChatTitle          string                   `json:"chat_title,omitempty"`
+	ChatPhotoURL       string                   `json:"chat_photo_url,omitempty"`
 	FromUsername       string                   `json:"from_username"`
 	FromFirstName      string                   `json:"from_first_name"`
 	Text               string                   `json:"text"`
@@ -91,9 +101,15 @@ type CachedMessage struct {
 // If not cached, it fetches them from Telegram API
 func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 	// Check if already cached
+	escarbot.ReactionMutex.Lock()
+	if escarbot.AvailableReactions == nil {
+		escarbot.AvailableReactions = make(map[int64][]string)
+	}
 	if reactions, exists := escarbot.AvailableReactions[chatID]; exists {
+		escarbot.ReactionMutex.Unlock()
 		return reactions
 	}
+	escarbot.ReactionMutex.Unlock()
 
 	// Not cached, fetch from API
 	defaultReactions := []string{"👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨"}
@@ -125,7 +141,9 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 	}
 
 	// Cache the result
+	escarbot.ReactionMutex.Lock()
 	escarbot.AvailableReactions[chatID] = reactions
+	escarbot.ReactionMutex.Unlock()
 	log.Printf("Loaded %d available reactions for chat %d", len(reactions), chatID)
 
 	return reactions
@@ -230,7 +248,8 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		LogChannelID:       logChannelIdInt,
 		BannedWords:        bannedWords,
 		AvailableReactions: availableReactionsMap,
-		MessageCache:       make([]CachedMessage, 0, maxCacheSize),
+		MessageCache:       make(map[int64][]CachedMessage),
+		ChatCache:          make(map[int64]ChatInfo),
 		MaxCacheSize:       maxCacheSize,
 		WelcomeText:        os.Getenv("WELCOME_TEXT"),
 		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
@@ -289,7 +308,7 @@ func BotPoll(escarbot *EscarBot) {
 				}
 			}
 
-			addMessageToCache(escarbot, msg)
+			AddMessageToCache(escarbot, msg)
 
 			handleNewChatMembers(escarbot, msg)
 
@@ -307,16 +326,16 @@ func BotPoll(escarbot *EscarBot) {
 			handleChatMemberUpdate(escarbot, update.ChatMember)
 		}
 		if update.ChannelPost != nil { // If we got a channel post
-			addMessageToCache(escarbot, update.ChannelPost)
+			AddMessageToCache(escarbot, update.ChannelPost)
 			if channelForward {
 				channelPostHandler(escarbot, update.ChannelPost)
 			}
 		}
 		if update.EditedMessage != nil {
-			updateMessageInCache(escarbot, update.EditedMessage)
+			UpdateMessageInCache(escarbot, update.EditedMessage)
 		}
 		if update.EditedChannelPost != nil {
-			updateMessageInCache(escarbot, update.EditedChannelPost)
+			UpdateMessageInCache(escarbot, update.EditedChannelPost)
 		}
 		if update.MessageReactionCount != nil {
 			updateReactionsInCache(escarbot, update.MessageReactionCount)
