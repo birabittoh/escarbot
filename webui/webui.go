@@ -37,6 +37,9 @@ func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.StateMutex.RLock()
 		defer bot.StateMutex.RUnlock()
 
+		bot.CacheMutex.Lock()
+		defer bot.CacheMutex.Unlock()
+
 		data := struct {
 			*telegram.EscarBot
 			AllReplacers []telegram.Replacer
@@ -269,6 +272,7 @@ func chatsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		for _, chat := range bot.ChatCache {
 			chats = append(chats, chat)
 		}
+		log.Printf("Chats request: returning %d chats", len(chats))
 		json.NewEncoder(w).Encode(chats)
 	}
 }
@@ -280,8 +284,16 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.CacheMutex.Lock()
 		defer bot.CacheMutex.Unlock()
 
-		log.Printf("Message cache request: returning messages for %d chats", len(bot.MessageCache))
-		json.NewEncoder(w).Encode(bot.MessageCache)
+		chatIDs := make([]int64, 0, len(bot.MessageCache))
+		for id := range bot.MessageCache {
+			chatIDs = append(chatIDs, id)
+		}
+
+		log.Printf("Message cache request from %s: returning messages for %d chats: %v", r.RemoteAddr, len(bot.MessageCache), chatIDs)
+		err := json.NewEncoder(w).Encode(bot.MessageCache)
+		if err != nil {
+			log.Printf("Error encoding message cache: %v", err)
+		}
 	}
 }
 

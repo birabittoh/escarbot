@@ -33,6 +33,7 @@ type EscarBot struct {
 	MessageCache       map[int64][]CachedMessage
 	ChatCache          map[int64]ChatInfo
 	CacheMutex         sync.Mutex
+	ReactionMutex      sync.Mutex
 	StateMutex         sync.RWMutex
 	MaxCacheSize       int
 	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
@@ -93,9 +94,15 @@ type CachedMessage struct {
 // If not cached, it fetches them from Telegram API
 func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 	// Check if already cached
+	escarbot.ReactionMutex.Lock()
+	if escarbot.AvailableReactions == nil {
+		escarbot.AvailableReactions = make(map[int64][]string)
+	}
 	if reactions, exists := escarbot.AvailableReactions[chatID]; exists {
+		escarbot.ReactionMutex.Unlock()
 		return reactions
 	}
+	escarbot.ReactionMutex.Unlock()
 
 	// Not cached, fetch from API
 	defaultReactions := []string{"👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨"}
@@ -127,7 +134,9 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 	}
 
 	// Cache the result
+	escarbot.ReactionMutex.Lock()
 	escarbot.AvailableReactions[chatID] = reactions
+	escarbot.ReactionMutex.Unlock()
 	log.Printf("Loaded %d available reactions for chat %d", len(reactions), chatID)
 
 	return reactions

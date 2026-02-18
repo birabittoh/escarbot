@@ -256,6 +256,10 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
 
+	if escarbot.MessageCache == nil {
+		escarbot.MessageCache = make(map[int64][]CachedMessage)
+	}
+
 	chatMessages, ok := escarbot.MessageCache[update.Chat.ID]
 	if !ok {
 		return
@@ -331,8 +335,14 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		return
 	}
 
-	escarbot.CacheMutex.Lock()
 	// Check if already in cache (avoid duplicates)
+	escarbot.CacheMutex.Lock()
+	if escarbot.MessageCache == nil {
+		escarbot.MessageCache = make(map[int64][]CachedMessage)
+	}
+	if escarbot.ChatCache == nil {
+		escarbot.ChatCache = make(map[int64]ChatInfo)
+	}
 	chatMessages := escarbot.MessageCache[message.Chat.ID]
 	for _, msg := range chatMessages {
 		if msg.MessageID == message.MessageID {
@@ -341,7 +351,7 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		}
 	}
 
-	// Handle Chat Cache
+	// Handle Chat Cache - get or prepare info outside major lock
 	chatInfo, exists := escarbot.ChatCache[message.Chat.ID]
 	escarbot.CacheMutex.Unlock()
 
@@ -374,19 +384,19 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		escarbot.CacheMutex.Unlock()
 	}
 
+	// Get available reactions (contains internal locking and potential network calls)
+	reactions := getAvailableReactions(escarbot, message.Chat.ID)
+
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
 
-	// Re-verify if it was added while we were fetching chat info
+	// Re-verify if it was added while we were fetching chat info/reactions
 	chatMessages = escarbot.MessageCache[message.Chat.ID]
 	for _, msg := range chatMessages {
 		if msg.MessageID == message.MessageID {
 			return
 		}
 	}
-
-	// Get available reactions for this chat
-	reactions := getAvailableReactions(escarbot, message.Chat.ID)
 
 	fromUsername := ""
 	fromFirstName := "Channel"
@@ -438,6 +448,9 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if escarbot.OnMessageCached != nil {
 		escarbot.OnMessageCached(cached)
 	}
+
+	log.Printf("Added message %d from chat %d (%s) to cache. Total messages for chat: %d",
+		message.MessageID, message.Chat.ID, chatInfo.Title, len(escarbot.MessageCache[message.Chat.ID]))
 }
 
 // updateMessageInCache updates an existing message in the cache with its new content and saves history
@@ -447,14 +460,22 @@ func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	}
 
 	escarbot.CacheMutex.Lock()
-	defer escarbot.CacheMutex.Unlock()
-
+	if escarbot.MessageCache == nil {
+		escarbot.MessageCache = make(map[int64][]CachedMessage)
+	}
 	chatMessages, ok := escarbot.MessageCache[message.Chat.ID]
+	escarbot.CacheMutex.Unlock()
+
 	if !ok {
 		addMessageToCache(escarbot, message)
 		return
 	}
 
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	// Re-fetch chatMessages after locking
+	chatMessages = escarbot.MessageCache[message.Chat.ID]
 	for i, msg := range chatMessages {
 		if msg.MessageID == message.MessageID {
 			// Save current state to history
@@ -489,6 +510,10 @@ func updateReactionsInCache(escarbot *EscarBot, update *tgbotapi.MessageReaction
 
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
+
+	if escarbot.MessageCache == nil {
+		escarbot.MessageCache = make(map[int64][]CachedMessage)
+	}
 
 	chatMessages, ok := escarbot.MessageCache[update.Chat.ID]
 	if !ok {
