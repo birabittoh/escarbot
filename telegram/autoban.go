@@ -352,8 +352,6 @@ func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 			escarbot.MessageCache[i].Caption = message.Caption
 			escarbot.MessageCache[i].Entities = message.Entities
 
-			log.Printf("Updated message %d in cache with new content and history", message.MessageID)
-
 			// Broadcast update
 			if escarbot.OnMessageCached != nil {
 				escarbot.OnMessageCached(escarbot.MessageCache[i])
@@ -361,6 +359,8 @@ func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 			return
 		}
 	}
+	// If not in cache, add it as new (though we won't have history)
+	addMessageToCache(escarbot, message)
 }
 
 // updateReactionsInCache updates reaction counts for a cached message

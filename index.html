@@ -815,7 +815,7 @@
 
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
-        let messageCache = [];
+        window.messageCache = [];
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
         // --- UI Switching ---
@@ -1058,33 +1058,41 @@
             const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
             ws.onopen = () => fetch('/api/messageCache').then(r => r.json()).then(msgs => {
-                messageCache = msgs;
+                window.messageCache = msgs;
                 renderMessages();
             });
 
             ws.onmessage = (e) => {
                 const newMsg = JSON.parse(e.data);
-                const index = messageCache.findIndex(m => m.message_id === newMsg.message_id && m.chat_id === newMsg.chat_id);
+
+                // Use string comparison to handle potential large integer issues or type mismatches
+                const index = window.messageCache.findIndex(m =>
+                    String(m.message_id) === String(newMsg.message_id) &&
+                    String(m.chat_id) === String(newMsg.chat_id)
+                );
+
                 if (index !== -1) {
-                    messageCache[index] = newMsg;
-                } else {
-                    messageCache.unshift(newMsg);
-                    if(messageCache.length > 100) messageCache.pop();
+                    // Remove old version so the updated one moves to the top
+                    window.messageCache.splice(index, 1);
                 }
+
+                window.messageCache.unshift(newMsg);
+                if(window.messageCache.length > 100) window.messageCache.pop();
+
                 renderMessages();
             };
 
             ws.onclose = () => setTimeout(connectWebSocket, 3000);
         }
 
-        function renderMessages() {
+        window.renderMessages = function() {
             const container = document.getElementById('messageCache');
-            if(messageCache.length === 0) {
+            if(window.messageCache.length === 0) {
                 container.innerHTML = '<div style="text-align:center;color:#6b7280;padding:20px;">No messages yet</div>';
                 return;
             }
 
-            container.innerHTML = messageCache.map(msg => `
+            container.innerHTML = window.messageCache.map(msg => `
                 <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                         <span class="cached-message-user">${msg.from_first_name || 'User'} ${msg.chat_title ? `(${msg.chat_title})` : `[${msg.chat_id}]`}</span>
@@ -1165,7 +1173,7 @@
             });
             fetch(baseUrl + "setMessageReaction?" + params).then(r => r.json()).then(data => {
                 if(data.ok) {
-                    const msg = messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
+                    const msg = window.messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
                     if(msg) msg.reactions = [{type: {emoji}, total_count: 1}];
                     renderMessages();
                     closeReactionPicker();
