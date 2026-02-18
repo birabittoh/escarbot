@@ -1178,6 +1178,10 @@
                                 for (const r of msg.recent_reactions) { grouped[r.emoji] = (grouped[r.emoji] || 0) + 1; }
                                 buttons = Object.entries(grouped).map(([emoji, count]) => ({ emoji, count }));
                             }
+                            // Always show the bot's own reaction even if it isn't in the lists yet
+                            if (msg.bot_reaction && !buttons.find(b => b.emoji === msg.bot_reaction)) {
+                                buttons.push({ emoji: msg.bot_reaction, count: 1 });
+                            }
                             if (!buttons.length) return '';
                             return `<div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">${buttons.map(({emoji, count}) => {
                                 const users = (msg.recent_reactions || []).filter(rr => rr.emoji === emoji).map(rr => escapeHTML(rr.user));
