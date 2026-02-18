@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -46,7 +47,6 @@ func unquoteValue(value string) string {
 // UpdateEnvVar updates or creates a key-value pair in the .env file
 func UpdateEnvVar(key, value string) error {
 	envVars := make(map[string]string)
-	var keyOrder []string
 
 	// Read existing .env file if it exists
 	file, err := os.Open(envFilePath)
@@ -64,16 +64,19 @@ func UpdateEnvVar(key, value string) error {
 				k := parts[0]
 				v := unquoteValue(parts[1])
 				envVars[k] = v
-				keyOrder = append(keyOrder, k)
 			}
 		}
 	}
 
 	// Update or add the new key-value pair
-	if _, exists := envVars[key]; !exists {
-		keyOrder = append(keyOrder, key)
-	}
 	envVars[key] = value
+
+	// Get all keys and sort them alphabetically
+	var keys []string
+	for k := range envVars {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
 	// Write back to .env file
 	outputFile, err := os.Create(envFilePath)
@@ -83,7 +86,7 @@ func UpdateEnvVar(key, value string) error {
 	defer outputFile.Close()
 
 	writer := bufio.NewWriter(outputFile)
-	for _, k := range keyOrder {
+	for _, k := range keys {
 		v := envVars[k]
 		// Quote values that need it
 		if needsQuoting(v) {
