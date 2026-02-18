@@ -76,6 +76,7 @@ type CachedMessage struct {
 	AvailableReactions []string                 `json:"available_reactions,omitempty"`
 	Reactions          []tgbotapi.ReactionCount `json:"reactions,omitempty"`
 	RecentReactions    []ReactionDetail         `json:"recent_reactions,omitempty"`
+	BotReaction        string                   `json:"bot_reaction,omitempty"`
 	History            []MessageHistory         `json:"history,omitempty"`
 }
 

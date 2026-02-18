@@ -488,12 +488,50 @@
             font-size: 0.9rem;
         }
 
-        .reaction-count {
+        .reaction-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .reaction-count-btn {
             background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.8rem;
-            margin-right: 4px;
+            cursor: pointer;
+            color: inherit;
+            transition: background 0.2s ease;
+        }
+
+        .reaction-count-btn:hover {
+            background: rgba(139, 92, 246, 0.3);
+        }
+
+        .reaction-count-btn.bot-active {
+            background: rgba(139, 92, 246, 0.5);
+            border-color: rgba(139, 92, 246, 0.9);
+        }
+
+        .reaction-tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 22, 37, 0.97);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 50;
+            pointer-events: none;
+            color: #d1d5db;
+        }
+
+        .reaction-wrapper:hover .reaction-tooltip {
+            display: block;
         }
 
         .cached-message-media {
@@ -1132,15 +1170,26 @@
                         </div>
                     ` : ''}
 
-                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
-                        ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
-                    </div>
-
-                    ${msg.recent_reactions && msg.recent_reactions.length > 0 ? `
-                        <div class="recent-reactions" style="font-size: 0.75rem; color: #9ca3af; margin-top: 5px; font-style: italic;">
-                            ${msg.recent_reactions.map(r => `${escapeHTML(r.user)} ${r.emoji}`).join(', ')}
-                        </div>
-                    ` : ''}
+                    ${(() => {
+                            // Prefer aggregate reaction counts; fall back to recent_reactions grouped by emoji
+                            let buttons = (msg.reactions || []).map(r => ({ emoji: r.type.emoji, count: r.total_count }));
+                            if (!buttons.length && msg.recent_reactions && msg.recent_reactions.length > 0) {
+                                const grouped = {};
+                                for (const r of msg.recent_reactions) { grouped[r.emoji] = (grouped[r.emoji] || 0) + 1; }
+                                buttons = Object.entries(grouped).map(([emoji, count]) => ({ emoji, count }));
+                            }
+                            // Always include the bot's own reaction in the count
+                            if (msg.bot_reaction) {
+                                const existing = buttons.find(b => b.emoji === msg.bot_reaction);
+                                if (existing) { existing.count += 1; } else { buttons.push({ emoji: msg.bot_reaction, count: 1 }); }
+                            }
+                            if (!buttons.length) return '';
+                            return `<div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">${buttons.map(({emoji, count}) => {
+                                const users = (msg.recent_reactions || []).filter(rr => rr.emoji === emoji).map(rr => escapeHTML(rr.user));
+                                const active = msg.bot_reaction === emoji;
+                                return `<div class="reaction-wrapper"><button class="reaction-count-btn${active ? ' bot-active' : ''}" onclick='event.stopPropagation(); handleReactionClick(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(emoji)}, ${JSON.stringify(msg.bot_reaction || "")})'>${emoji} ${count}</button>${users.length ? `<div class="reaction-tooltip">${users.join(', ')}</div>` : ''}</div>`;
+                            }).join('')}</div>`;
+                        })()}
                 </div>
             `).join('');
         }
@@ -1180,17 +1229,26 @@
         }
 
         function sendReaction(emoji) {
-            const params = new URLSearchParams({
-                chat_id: currReactChat,
-                message_id: currReactMsg,
-                reaction: JSON.stringify([{type: "emoji", emoji}])
-            });
-            fetch(baseUrl + "setMessageReaction?" + params).then(r => r.json()).then(data => {
-                if(data.ok) {
-                    const msg = window.messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
-                    if(msg) msg.reactions = [{type: {emoji}, total_count: 1}];
+            doSetReaction(currReactChat, currReactMsg, emoji);
+            closeReactionPicker();
+        }
+
+        function handleReactionClick(chatId, msgId, emoji, currentBotReaction) {
+            if (emoji === currentBotReaction) {
+                doSetReaction(chatId, msgId, '');
+            } else {
+                doSetReaction(chatId, msgId, emoji);
+            }
+        }
+
+        function doSetReaction(chatId, msgId, emoji) {
+            const params = new URLSearchParams({ chat_id: chatId, message_id: msgId, emoji });
+            fetch('/setReaction?' + params).then(r => r.json()).then(data => {
+                if (data.status === 'ok') {
+                    const msg = window.messageCache.find(m =>
+                        String(m.message_id) === String(msgId) && String(m.chat_id) === String(chatId));
+                    if (msg) msg.bot_reaction = emoji;
                     renderMessages();
-                    closeReactionPicker();
                 }
             });
         }
