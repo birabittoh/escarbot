@@ -332,18 +332,19 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	}
 
 	escarbot.CacheMutex.Lock()
-	defer escarbot.CacheMutex.Unlock()
-
 	// Check if already in cache (avoid duplicates)
 	chatMessages := escarbot.MessageCache[message.Chat.ID]
 	for _, msg := range chatMessages {
 		if msg.MessageID == message.MessageID {
+			escarbot.CacheMutex.Unlock()
 			return
 		}
 	}
 
 	// Handle Chat Cache
 	chatInfo, exists := escarbot.ChatCache[message.Chat.ID]
+	escarbot.CacheMutex.Unlock()
+
 	if !exists {
 		chatTitle := message.Chat.Title
 		if chatTitle == "" {
@@ -351,7 +352,7 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		}
 
 		chatPhotoURL := ""
-		// Fetch full chat info to get photo
+		// Fetch full chat info to get photo (Network call outside mutex)
 		chatConfig := tgbotapi.ChatInfoConfig{
 			ChatConfig: tgbotapi.ChatConfig{
 				ChatID: message.Chat.ID,
@@ -367,7 +368,21 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 			Title:    chatTitle,
 			PhotoURL: chatPhotoURL,
 		}
+
+		escarbot.CacheMutex.Lock()
 		escarbot.ChatCache[message.Chat.ID] = chatInfo
+		escarbot.CacheMutex.Unlock()
+	}
+
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	// Re-verify if it was added while we were fetching chat info
+	chatMessages = escarbot.MessageCache[message.Chat.ID]
+	for _, msg := range chatMessages {
+		if msg.MessageID == message.MessageID {
+			return
+		}
 	}
 
 	// Get available reactions for this chat

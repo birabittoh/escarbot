@@ -1258,6 +1258,8 @@
 
         function selectChat(chatId) {
             window.selectedChatId = chatId;
+            // Update Recipient ID field
+            document.getElementById('recipientId').value = chatId;
             renderChats();
             renderMessages();
         }
@@ -1278,7 +1280,10 @@
             container.innerHTML = msgs.map(msg => `
                 <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                        <span class="cached-message-user">${escapeHTML(msg.from_first_name || 'User')} ${msg.chat_title ? `(${escapeHTML(msg.chat_title)})` : `[${msg.chat_id}]`}</span>
+                        <span class="cached-message-user">
+                            ${escapeHTML(msg.from_first_name || 'User')}
+                            ${msg.is_topic_message ? `<span style="color: #9ca3af; font-size: 0.8rem; font-weight: normal; margin-left: 5px;">#Thread ${msg.thread_id}</span>` : ''}
+                        </span>
                         <div style="display:flex;gap:5px;">
                             <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})'>😊</button>
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
@@ -1334,7 +1339,7 @@
         function selectMessage(msg) {
             document.getElementById('recipientId').value = msg.chat_id;
             document.getElementById('replyToMessageId').value = msg.message_id;
-            document.getElementById('threadId').value = msg.is_topic_message ? msg.thread_id : '';
+            document.getElementById('threadId').value = msg.thread_id || '';
 
             // Focus message box
             document.getElementById('customMessage').focus();
