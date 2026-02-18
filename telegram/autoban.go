@@ -59,15 +59,24 @@ func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 	escarbot.JoinCacheMutex.Lock()
 	// Cleanup old entries (older than 1 minute) periodically
 	// We do it here for simplicity
-	for id, t := range escarbot.JoinProcessedCache {
-		if time.Since(t) > 1*time.Minute {
+	for id, entry := range escarbot.JoinProcessedCache {
+		if time.Since(entry.Time) > 1*time.Minute {
 			delete(escarbot.JoinProcessedCache, id)
 		}
 	}
 
 	lastProcessed, exists := escarbot.JoinProcessedCache[user.ID]
 	// If processed in the last 10 seconds, it's a duplicate
-	if exists && time.Since(lastProcessed) < 10*time.Second {
+	if exists && time.Since(lastProcessed.Time) < 10*time.Second {
+		// If we now have a JoinMsgID but didn't before
+		if joinMsgID != 0 && lastProcessed.JoinMsgID == 0 {
+			lastProcessed.JoinMsgID = joinMsgID
+			if lastProcessed.IsBanned {
+				// User was already banned, delete this new join message
+				deleteMessages(escarbot, chatID, joinMsgID)
+				log.Printf("Deleted late join message %d for banned user %d", joinMsgID, user.ID)
+			}
+		}
 		escarbot.JoinCacheMutex.Unlock()
 
 		// Even if it's a duplicate, we might want to update the joinMsgID for captcha
@@ -81,7 +90,13 @@ func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		escarbot.CaptchaMutex.Unlock()
 		return
 	}
-	escarbot.JoinProcessedCache[user.ID] = time.Now()
+
+	entry := &JoinProcessedEntry{
+		Time:      time.Now(),
+		JoinMsgID: joinMsgID,
+		IsBanned:  false,
+	}
+	escarbot.JoinProcessedCache[user.ID] = entry
 	escarbot.JoinCacheMutex.Unlock()
 
 	escarbot.StateMutex.RLock()
@@ -96,6 +111,11 @@ func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 
 		// Ban user and cleanup join message
 		banAndCleanup(escarbot, chatID, user, joinMsgID)
+
+		// Mark as banned in join cache to handle potential late service messages
+		escarbot.JoinCacheMutex.Lock()
+		entry.IsBanned = true
+		escarbot.JoinCacheMutex.Unlock()
 
 		return
 	}
