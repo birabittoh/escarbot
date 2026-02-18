@@ -270,6 +270,17 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		chatTitle = message.Chat.FirstName
 	}
 
+	var mediaURL, mediaType string
+	if len(message.Photo) > 0 {
+		mediaType = "photo"
+		// Use the largest photo
+		photo := message.Photo[len(message.Photo)-1]
+		mediaURL = "/api/media?file_id=" + photo.FileID
+	} else if message.Sticker != nil {
+		mediaType = "sticker"
+		mediaURL = "/api/media?file_id=" + message.Sticker.FileID
+	}
+
 	cached := CachedMessage{
 		MessageID:          message.MessageID,
 		ChatID:             message.Chat.ID,
@@ -277,6 +288,9 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		FromUsername:       message.From.UserName,
 		FromFirstName:      message.From.FirstName,
 		Text:               message.Text,
+		Caption:            message.Caption,
+		MediaURL:           mediaURL,
+		MediaType:          mediaType,
 		Entities:           message.Entities,
 		ThreadID:           message.MessageThreadID,
 		IsTopicMessage:     message.IsTopicMessage,

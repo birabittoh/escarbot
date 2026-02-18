@@ -54,6 +54,9 @@ type CachedMessage struct {
 	FromUsername       string                   `json:"from_username"`
 	FromFirstName      string                   `json:"from_first_name"`
 	Text               string                   `json:"text"`
+	Caption            string                   `json:"caption,omitempty"`
+	MediaURL           string                   `json:"media_url,omitempty"`
+	MediaType          string                   `json:"media_type,omitempty"`
 	Entities           []tgbotapi.MessageEntity `json:"entities,omitempty"`
 	ThreadID           int                      `json:"thread_id,omitempty"`
 	IsTopicMessage     bool                     `json:"is_topic_message"`
