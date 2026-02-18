@@ -1001,6 +1001,14 @@
             });
         });
 
+        // --- Helpers ---
+        function escapeHTML(str) {
+            if (!str) return "";
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         // --- Messaging ---
         document.getElementById("customMessageButton").addEventListener("click", (e) => {
             const btn = e.target;
@@ -1095,7 +1103,7 @@
             container.innerHTML = window.messageCache.map(msg => `
                 <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                        <span class="cached-message-user">${msg.from_first_name || 'User'} ${msg.chat_title ? `(${msg.chat_title})` : `[${msg.chat_id}]`}</span>
+                        <span class="cached-message-user">${escapeHTML(msg.from_first_name || 'User')} ${msg.chat_title ? `(${escapeHTML(msg.chat_title)})` : `[${msg.chat_id}]`}</span>
                         <div style="display:flex;gap:5px;">
                             <button class="reaction-btn" onclick='event.stopPropagation(); showReactionPicker(${msg.chat_id}, ${msg.message_id}, ${JSON.stringify(msg.available_reactions || [])})'>😊</button>
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
@@ -1106,7 +1114,7 @@
                             <img src="${msg.media_url}" alt="${msg.media_type}">
                         </div>
                     ` : ''}
-                    <div class="cached-message-text">${truncate(msg.text || msg.caption) || (msg.media_url ? '' : '<media>')}</div>
+                <div class="cached-message-text">${escapeHTML(truncate(msg.text || msg.caption)) || (msg.media_url ? '' : '<media>')}</div>
 
                     ${msg.history && msg.history.length > 0 ? `
                         <div class="message-history" style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;" onclick="event.stopPropagation()">
@@ -1116,7 +1124,7 @@
                                     ${msg.history.map((h, idx) => `
                                         <div style="margin-bottom: 6px;">
                                             <div style="font-weight: 600; font-size: 0.65rem; color: #8b5cf6;">VERSION ${idx + 1}</div>
-                                            <div style="font-style: italic; color: #d1d5db;">${truncate(h.text || h.caption, 80)}</div>
+                                        <div style="font-style: italic; color: #d1d5db;">${escapeHTML(truncate(h.text || h.caption, 80))}</div>
                                         </div>
                                     `).reverse().join('')}
                                 </div>
@@ -1127,6 +1135,12 @@
                     <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
                         ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
                     </div>
+
+                    ${msg.recent_reactions && msg.recent_reactions.length > 0 ? `
+                        <div class="recent-reactions" style="font-size: 0.75rem; color: #9ca3af; margin-top: 5px; font-style: italic;">
+                            ${msg.recent_reactions.map(r => `${escapeHTML(r.user)} ${r.emoji}`).join(', ')}
+                        </div>
+                    ` : ''}
                 </div>
             `).join('');
         }

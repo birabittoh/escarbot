@@ -53,6 +53,12 @@ type MessageHistory struct {
 	EditDate int    `json:"edit_date"`
 }
 
+// ReactionDetail represents an individual reaction by a user
+type ReactionDetail struct {
+	User  string `json:"user"`
+	Emoji string `json:"emoji"`
+}
+
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
@@ -69,6 +75,7 @@ type CachedMessage struct {
 	IsTopicMessage     bool                     `json:"is_topic_message"`
 	AvailableReactions []string                 `json:"available_reactions,omitempty"`
 	Reactions          []tgbotapi.ReactionCount `json:"reactions,omitempty"`
+	RecentReactions    []ReactionDetail         `json:"recent_reactions,omitempty"`
 	History            []MessageHistory         `json:"history,omitempty"`
 }
 
@@ -305,6 +312,9 @@ func BotPoll(escarbot *EscarBot) {
 		}
 		if update.MessageReactionCount != nil {
 			updateReactionsInCache(escarbot, update.MessageReactionCount)
+		}
+		if update.MessageReaction != nil {
+			updateIndividualReactionInCache(escarbot, update.MessageReaction)
 		}
 	}
 }

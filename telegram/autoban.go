@@ -247,6 +247,73 @@ func deleteMessages(escarbot *EscarBot, chatID int64, messageIDs ...int) {
 	}
 }
 
+// updateIndividualReactionInCache updates individual reactions for a cached message
+func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.MessageReactionUpdated) {
+	if update == nil {
+		return
+	}
+
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	for i, msg := range escarbot.MessageCache {
+		if msg.MessageID == update.MessageID && msg.ChatID == update.Chat.ID {
+			// Find user name
+			userName := "Anonymous"
+			if update.User != nil {
+				userName = update.User.FirstName
+			} else if update.ActorChat != nil {
+				userName = update.ActorChat.Title
+			}
+
+			// Deduplicate and update reaction in the list
+			updated := false
+
+			// Remove existing entries for this user first
+			newReactions := []ReactionDetail{}
+			for _, r := range escarbot.MessageCache[i].RecentReactions {
+				if r.User != userName {
+					newReactions = append(newReactions, r)
+				} else {
+					updated = true // Something changed
+				}
+			}
+
+			// Add the new reaction if present
+			if len(update.NewReaction) > 0 {
+				// Only take the first emoji reaction for simplicity
+				for _, reaction := range update.NewReaction {
+					if reaction.Type == "emoji" {
+						detail := ReactionDetail{
+							User:  userName,
+							Emoji: reaction.Emoji,
+						}
+						// Prepend
+						newReactions = append([]ReactionDetail{detail}, newReactions...)
+						updated = true
+						break
+					}
+				}
+			}
+
+			// Limit to 5
+			if len(newReactions) > 5 {
+				newReactions = newReactions[:5]
+			}
+			escarbot.MessageCache[i].RecentReactions = newReactions
+
+			if updated {
+				log.Printf("Updated individual reactions for message %d in cache", update.MessageID)
+				// Broadcast update
+				if escarbot.OnMessageCached != nil {
+					escarbot.OnMessageCached(escarbot.MessageCache[i])
+				}
+			}
+			return
+		}
+	}
+}
+
 // banAndCleanup bans a user and deletes relevant messages
 func banAndCleanup(escarbot *EscarBot, chatID int64, user tgbotapi.User, messageIDs ...int) {
 	banUser(escarbot, chatID, user)
