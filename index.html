@@ -1048,6 +1048,11 @@
         });
 
         // --- WebSocket & Cache ---
+        function truncate(str, len = 100) {
+            if (!str) return str;
+            return str.length > len ? str.substring(0, len) + "..." : str;
+        }
+
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
@@ -1058,8 +1063,14 @@
             });
 
             ws.onmessage = (e) => {
-                messageCache.unshift(JSON.parse(e.data));
-                if(messageCache.length > 100) messageCache.pop();
+                const newMsg = JSON.parse(e.data);
+                const index = messageCache.findIndex(m => m.message_id === newMsg.message_id && m.chat_id === newMsg.chat_id);
+                if (index !== -1) {
+                    messageCache[index] = newMsg;
+                } else {
+                    messageCache.unshift(newMsg);
+                    if(messageCache.length > 100) messageCache.pop();
+                }
                 renderMessages();
             };
 
@@ -1074,7 +1085,7 @@
             }
 
             container.innerHTML = messageCache.map(msg => `
-                <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg)})'>
+                <div class="cached-message" onclick='selectMessage(${JSON.stringify(msg).replace(/'/g, "&#39;")})'>
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                         <span class="cached-message-user">${msg.from_first_name || 'User'} ${msg.chat_title ? `(${msg.chat_title})` : `[${msg.chat_id}]`}</span>
                         <div style="display:flex;gap:5px;">
@@ -1087,8 +1098,25 @@
                             <img src="${msg.media_url}" alt="${msg.media_type}">
                         </div>
                     ` : ''}
-                    <div class="cached-message-text">${msg.text || msg.caption || (msg.media_url ? '' : '<media>')}</div>
-                    <div style="margin-top:5px;">
+                    <div class="cached-message-text">${truncate(msg.text || msg.caption) || (msg.media_url ? '' : '<media>')}</div>
+
+                    ${msg.history && msg.history.length > 0 ? `
+                        <div class="message-history" style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;" onclick="event.stopPropagation()">
+                            <details>
+                                <summary style="cursor: pointer; color: #a78bfa; font-weight: 500;">Edit History (${msg.history.length})</summary>
+                                <div style="padding-left: 10px; margin-top: 5px; border-left: 2px solid rgba(139, 92, 246, 0.3);">
+                                    ${msg.history.map((h, idx) => `
+                                        <div style="margin-bottom: 6px;">
+                                            <div style="font-weight: 600; font-size: 0.65rem; color: #8b5cf6;">VERSION ${idx + 1}</div>
+                                            <div style="font-style: italic; color: #d1d5db;">${truncate(h.text || h.caption, 80)}</div>
+                                        </div>
+                                    `).reverse().join('')}
+                                </div>
+                            </details>
+                        </div>
+                    ` : ''}
+
+                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
                         ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
                     </div>
                 </div>

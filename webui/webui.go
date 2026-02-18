@@ -265,21 +265,8 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.CacheMutex.Lock()
 		defer bot.CacheMutex.Unlock()
 
-		// Messages are already ordered (newest first), just truncate long texts
-		response := make([]telegram.CachedMessage, len(bot.MessageCache))
-		for i, msg := range bot.MessageCache {
-			// Truncate long messages
-			if len(msg.Text) > 100 {
-				msg.Text = msg.Text[:100] + "..."
-			}
-			if len(msg.Caption) > 100 {
-				msg.Caption = msg.Caption[:100] + "..."
-			}
-			response[i] = msg
-		}
-
-		log.Printf("Message cache request: returning %d total messages", len(response))
-		json.NewEncoder(w).Encode(response)
+		log.Printf("Message cache request: returning %d total messages", len(bot.MessageCache))
+		json.NewEncoder(w).Encode(bot.MessageCache)
 	}
 }
 
