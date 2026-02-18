@@ -287,24 +287,36 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		}
 
 		emoji := r.Form.Get("emoji")
-		if emoji == "" {
-			http.Error(w, "Missing emoji", http.StatusBadRequest)
-			return
+
+		// Build reaction list; empty emoji means remove the reaction
+		var reactions []tgbotapi.ReactionType
+		if emoji != "" {
+			reactions = []tgbotapi.ReactionType{{
+				Type:  "emoji",
+				Emoji: emoji,
+			}}
 		}
 
-		// Create reaction
-		reaction := tgbotapi.ReactionType{
-			Type:  "emoji",
-			Emoji: emoji,
-		}
-
-		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, []tgbotapi.ReactionType{reaction}, false)
+		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, reactions, false)
 		_, err = bot.Bot.Request(reactionConfig)
 		if err != nil {
 			log.Printf("Error setting reaction: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Update BotReaction in cache and broadcast
+		bot.CacheMutex.Lock()
+		for i, msg := range bot.MessageCache {
+			if msg.MessageID == messageID && msg.ChatID == chatID {
+				bot.MessageCache[i].BotReaction = emoji
+				if bot.OnMessageCached != nil {
+					bot.OnMessageCached(bot.MessageCache[i])
+				}
+				break
+			}
+		}
+		bot.CacheMutex.Unlock()
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
