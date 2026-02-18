@@ -184,7 +184,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	channelForward := getBoolEnv("CHANNEL_FORWARD", true)
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
-	captcha := getBoolEnv("CAPTCHA", false) // Default to false
+	captcha := getBoolEnv("CAPTCHA", true)
 	captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT")
 	captchaTimeout := 120
 	if captchaTimeoutStr != "" {
