@@ -55,8 +55,9 @@ type MessageHistory struct {
 
 // ReactionDetail represents an individual reaction by a user
 type ReactionDetail struct {
-	User  string `json:"user"`
-	Emoji string `json:"emoji"`
+	User   string `json:"user"`
+	UserID int64  `json:"user_id"`
+	Emoji  string `json:"emoji"`
 }
 
 // CachedMessage represents a message stored in cache

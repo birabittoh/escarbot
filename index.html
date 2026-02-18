@@ -510,6 +510,32 @@
             max-width: 100%;
             object-fit: contain;
         }
+
+        .reaction-button {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 8px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            color: #d1d5db;
+            position: relative;
+        }
+
+        .reaction-button:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+
+        .reaction-button.active {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 1px #8b5cf6;
+        }
     </style>
 </head>
 <body>
@@ -815,6 +841,7 @@
 
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
+        const botId = "{{ .Bot.Self.ID }}";
         window.messageCache = [];
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
@@ -1132,15 +1159,28 @@
                         </div>
                     ` : ''}
 
-                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 4px;">
-                        ${(msg.reactions || []).map(r => `<span class="reaction-count">${r.type.emoji} ${r.total_count}</span>`).join('')}
-                    </div>
+                    <div style="margin-top:8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${(msg.reactions || []).map(r => {
+                            const emoji = r.type.emoji;
+                            const count = r.total_count;
+                            const users = (msg.recent_reactions || [])
+                                .filter(rr => rr.emoji === emoji)
+                                .map(rr => escapeHTML(rr.user))
+                                .join(', ');
 
-                    ${msg.recent_reactions && msg.recent_reactions.length > 0 ? `
-                        <div class="recent-reactions" style="font-size: 0.75rem; color: #9ca3af; margin-top: 5px; font-style: italic;">
-                            ${msg.recent_reactions.map(r => `${escapeHTML(r.user)} ${r.emoji}`).join(', ')}
-                        </div>
-                    ` : ''}
+                            const isBotReaction = (msg.recent_reactions || [])
+                                .some(rr => rr.emoji === emoji && String(rr.user_id) === String(botId));
+
+                            return `
+                                <div class="reaction-button ${isBotReaction ? 'active' : ''}"
+                                     title="${users || 'Someone'}"
+                                     onclick="event.stopPropagation(); toggleReaction(${msg.chat_id}, ${msg.message_id}, '${emoji}', ${isBotReaction})">
+                                    <span>${emoji}</span>
+                                    <span style="font-weight: 600;">${count}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
             `).join('');
         }
@@ -1179,20 +1219,27 @@
             document.getElementById('reactionPicker').style.display = 'none';
         }
 
-        function sendReaction(emoji) {
+        function toggleReaction(chatId, messageId, emoji, isActive) {
             const params = new URLSearchParams({
-                chat_id: currReactChat,
-                message_id: currReactMsg,
-                reaction: JSON.stringify([{type: "emoji", emoji}])
+                chat_id: chatId,
+                message_id: messageId,
+                emoji: isActive ? '' : emoji
             });
-            fetch(baseUrl + "setMessageReaction?" + params).then(r => r.json()).then(data => {
-                if(data.ok) {
-                    const msg = window.messageCache.find(m => m.message_id === currReactMsg && m.chat_id === currReactChat);
-                    if(msg) msg.reactions = [{type: {emoji}, total_count: 1}];
-                    renderMessages();
-                    closeReactionPicker();
+
+            fetch('/setReaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'ok') {
+                    // Update will come via WebSocket
                 }
             });
+        }
+
+        function sendReaction(emoji) {
+            toggleReaction(currReactChat, currReactMsg, emoji, false);
+            closeReactionPicker();
         }
 
         // Initialize

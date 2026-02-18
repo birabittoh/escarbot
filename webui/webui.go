@@ -287,18 +287,17 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		}
 
 		emoji := r.Form.Get("emoji")
-		if emoji == "" {
-			http.Error(w, "Missing emoji", http.StatusBadRequest)
-			return
+
+		var reactions []tgbotapi.ReactionType
+		if emoji != "" {
+			// Create reaction
+			reactions = append(reactions, tgbotapi.ReactionType{
+				Type:  "emoji",
+				Emoji: emoji,
+			})
 		}
 
-		// Create reaction
-		reaction := tgbotapi.ReactionType{
-			Type:  "emoji",
-			Emoji: emoji,
-		}
-
-		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, []tgbotapi.ReactionType{reaction}, false)
+		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, reactions, false)
 		_, err = bot.Bot.Request(reactionConfig)
 		if err != nil {
 			log.Printf("Error setting reaction: %v", err)

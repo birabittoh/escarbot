@@ -258,12 +258,15 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 
 	for i, msg := range escarbot.MessageCache {
 		if msg.MessageID == update.MessageID && msg.ChatID == update.Chat.ID {
-			// Find user name
+			// Find user name and ID
 			userName := "Anonymous"
+			var userID int64
 			if update.User != nil {
 				userName = update.User.FirstName
+				userID = update.User.ID
 			} else if update.ActorChat != nil {
 				userName = update.ActorChat.Title
+				userID = update.ActorChat.ID
 			}
 
 			// Deduplicate and update reaction in the list
@@ -272,7 +275,7 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 			// Remove existing entries for this user first
 			newReactions := []ReactionDetail{}
 			for _, r := range escarbot.MessageCache[i].RecentReactions {
-				if r.User != userName {
+				if r.UserID != userID {
 					newReactions = append(newReactions, r)
 				} else {
 					updated = true // Something changed
@@ -285,8 +288,9 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 				for _, reaction := range update.NewReaction {
 					if reaction.Type == "emoji" {
 						detail := ReactionDetail{
-							User:  userName,
-							Emoji: reaction.Emoji,
+							User:   userName,
+							UserID: userID,
+							Emoji:  reaction.Emoji,
 						}
 						// Prepend
 						newReactions = append([]ReactionDetail{detail}, newReactions...)
@@ -296,9 +300,9 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 				}
 			}
 
-			// Limit to 5
-			if len(newReactions) > 5 {
-				newReactions = newReactions[:5]
+			// Limit to 50
+			if len(newReactions) > 50 {
+				newReactions = newReactions[:50]
 			}
 			escarbot.MessageCache[i].RecentReactions = newReactions
 
