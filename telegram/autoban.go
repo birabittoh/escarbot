@@ -256,16 +256,8 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
 
-	if escarbot.MessageCache == nil {
-		escarbot.MessageCache = make(map[int64][]CachedMessage)
-	}
-
-	chatMessages, ok := escarbot.MessageCache[update.Chat.ID]
-	if !ok {
-		return
-	}
-
-	for i, msg := range chatMessages {
+	messages := escarbot.MessageCache[update.Chat.ID]
+	for i, msg := range messages {
 		if msg.MessageID == update.MessageID {
 			// Find user name
 			userName := "Anonymous"
@@ -280,7 +272,7 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 
 			// Remove existing entries for this user first
 			newReactions := []ReactionDetail{}
-			for _, r := range msg.RecentReactions {
+			for _, r := range messages[i].RecentReactions {
 				if r.User != userName {
 					newReactions = append(newReactions, r)
 				} else {
@@ -309,13 +301,13 @@ func updateIndividualReactionInCache(escarbot *EscarBot, update *tgbotapi.Messag
 			if len(newReactions) > 5 {
 				newReactions = newReactions[:5]
 			}
-			escarbot.MessageCache[update.Chat.ID][i].RecentReactions = newReactions
+			messages[i].RecentReactions = newReactions
 
 			if updated {
 				log.Printf("Updated individual reactions for message %d in cache", update.MessageID)
 				// Broadcast update
 				if escarbot.OnMessageCached != nil {
-					escarbot.OnMessageCached(escarbot.MessageCache[update.Chat.ID][i])
+					escarbot.OnMessageCached(messages[i])
 				}
 			}
 			return
@@ -329,8 +321,8 @@ func banAndCleanup(escarbot *EscarBot, chatID int64, user tgbotapi.User, message
 	deleteMessages(escarbot, chatID, messageIDs...)
 }
 
-// addMessageToCache adds a message to cache for future searches
-func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
+// AddMessageToCache adds a message to the recent messages cache
+func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if message == nil {
 		return
 	}
@@ -340,9 +332,7 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if escarbot.MessageCache == nil {
 		escarbot.MessageCache = make(map[int64][]CachedMessage)
 	}
-	if escarbot.ChatCache == nil {
-		escarbot.ChatCache = make(map[int64]ChatInfo)
-	}
+
 	chatMessages := escarbot.MessageCache[message.Chat.ID]
 	for _, msg := range chatMessages {
 		if msg.MessageID == message.MessageID {
@@ -361,42 +351,29 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 			chatTitle = message.Chat.FirstName
 		}
 
-		chatPhotoURL := ""
-		// Fetch full chat info to get photo (Network call outside mutex)
-		chatConfig := tgbotapi.ChatInfoConfig{
-			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: message.Chat.ID,
-			},
-		}
+		photoURL := ""
+		chatConfig := tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: message.Chat.ID}}
 		fullChat, err := escarbot.Bot.GetChat(chatConfig)
 		if err == nil && fullChat.Photo != nil {
-			chatPhotoURL = "/api/media?file_id=" + fullChat.Photo.SmallFileID
+			photoURL = "/api/media?file_id=" + fullChat.Photo.SmallFileID
 		}
 
 		chatInfo = ChatInfo{
 			ID:       message.Chat.ID,
 			Title:    chatTitle,
-			PhotoURL: chatPhotoURL,
+			PhotoURL: photoURL,
 		}
 
 		escarbot.CacheMutex.Lock()
+		if escarbot.ChatCache == nil {
+			escarbot.ChatCache = make(map[int64]ChatInfo)
+		}
 		escarbot.ChatCache[message.Chat.ID] = chatInfo
 		escarbot.CacheMutex.Unlock()
 	}
 
 	// Get available reactions (contains internal locking and potential network calls)
 	reactions := getAvailableReactions(escarbot, message.Chat.ID)
-
-	escarbot.CacheMutex.Lock()
-	defer escarbot.CacheMutex.Unlock()
-
-	// Re-verify if it was added while we were fetching chat info/reactions
-	chatMessages = escarbot.MessageCache[message.Chat.ID]
-	for _, msg := range chatMessages {
-		if msg.MessageID == message.MessageID {
-			return
-		}
-	}
 
 	fromUsername := ""
 	fromFirstName := "Channel"
@@ -410,7 +387,6 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	var mediaURL, mediaType string
 	if len(message.Photo) > 0 {
 		mediaType = "photo"
-		// Use the largest photo
 		photo := message.Photo[len(message.Photo)-1]
 		mediaURL = "/api/media?file_id=" + photo.FileID
 	} else if message.Sticker != nil {
@@ -433,7 +409,17 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		ThreadID:           message.MessageThreadID,
 		IsTopicMessage:     message.IsTopicMessage,
 		AvailableReactions: reactions,
-		// Reactions field left empty - not available in current Message struct
+	}
+
+	escarbot.CacheMutex.Lock()
+	defer escarbot.CacheMutex.Unlock()
+
+	// Re-verify if it was added while we were fetching chat info/reactions
+	chatMessages = escarbot.MessageCache[message.Chat.ID]
+	for _, msg := range chatMessages {
+		if msg.MessageID == message.MessageID {
+			return
+		}
 	}
 
 	// Prepend to keep newest messages first
@@ -453,30 +439,21 @@ func addMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		message.MessageID, message.Chat.ID, chatInfo.Title, len(escarbot.MessageCache[message.Chat.ID]))
 }
 
-// updateMessageInCache updates an existing message in the cache with its new content and saves history
-func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
+// UpdateMessageInCache updates a message in the recent messages cache
+func UpdateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if message == nil {
 		return
 	}
 
 	escarbot.CacheMutex.Lock()
-	if escarbot.MessageCache == nil {
-		escarbot.MessageCache = make(map[int64][]CachedMessage)
-	}
-	chatMessages, ok := escarbot.MessageCache[message.Chat.ID]
-	escarbot.CacheMutex.Unlock()
-
+	messages, ok := escarbot.MessageCache[message.Chat.ID]
 	if !ok {
-		addMessageToCache(escarbot, message)
+		escarbot.CacheMutex.Unlock()
+		AddMessageToCache(escarbot, message)
 		return
 	}
 
-	escarbot.CacheMutex.Lock()
-	defer escarbot.CacheMutex.Unlock()
-
-	// Re-fetch chatMessages after locking
-	chatMessages = escarbot.MessageCache[message.Chat.ID]
-	for i, msg := range chatMessages {
+	for i, msg := range messages {
 		if msg.MessageID == message.MessageID {
 			// Save current state to history
 			historyItem := MessageHistory{
@@ -484,22 +461,24 @@ func updateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 				Caption:  msg.Caption,
 				EditDate: message.EditDate,
 			}
-			escarbot.MessageCache[message.Chat.ID][i].History = append(escarbot.MessageCache[message.Chat.ID][i].History, historyItem)
+			messages[i].History = append(messages[i].History, historyItem)
 
 			// Update content
-			escarbot.MessageCache[message.Chat.ID][i].Text = message.Text
-			escarbot.MessageCache[message.Chat.ID][i].Caption = message.Caption
-			escarbot.MessageCache[message.Chat.ID][i].Entities = message.Entities
+			messages[i].Text = message.Text
+			messages[i].Caption = message.Caption
+			messages[i].Entities = message.Entities
 
 			// Broadcast update
 			if escarbot.OnMessageCached != nil {
-				escarbot.OnMessageCached(escarbot.MessageCache[message.Chat.ID][i])
+				escarbot.OnMessageCached(messages[i])
 			}
+			escarbot.CacheMutex.Unlock()
 			return
 		}
 	}
+	escarbot.CacheMutex.Unlock()
 	// If not in cache, add it as new (though we won't have history)
-	addMessageToCache(escarbot, message)
+	AddMessageToCache(escarbot, message)
 }
 
 // updateReactionsInCache updates reaction counts for a cached message
@@ -511,24 +490,16 @@ func updateReactionsInCache(escarbot *EscarBot, update *tgbotapi.MessageReaction
 	escarbot.CacheMutex.Lock()
 	defer escarbot.CacheMutex.Unlock()
 
-	if escarbot.MessageCache == nil {
-		escarbot.MessageCache = make(map[int64][]CachedMessage)
-	}
-
-	chatMessages, ok := escarbot.MessageCache[update.Chat.ID]
-	if !ok {
-		return
-	}
-
-	for i, msg := range chatMessages {
+	messages := escarbot.MessageCache[update.Chat.ID]
+	for i, msg := range messages {
 		if msg.MessageID == update.MessageID {
-			escarbot.MessageCache[update.Chat.ID][i].Reactions = update.Reactions
+			messages[i].Reactions = update.Reactions
 
 			log.Printf("Updated reactions for message %d in cache", update.MessageID)
 
 			// Broadcast update
 			if escarbot.OnMessageCached != nil {
-				escarbot.OnMessageCached(escarbot.MessageCache[update.Chat.ID][i])
+				escarbot.OnMessageCached(messages[i])
 			}
 			return
 		}

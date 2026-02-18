@@ -31,7 +31,7 @@ func TestAddMessageToCache(t *testing.T) {
 	// Let's pre-populate ChatCache.
 	bot.ChatCache[123] = ChatInfo{ID: 123, Title: "Test Chat"}
 
-	addMessageToCache(bot, msg)
+	AddMessageToCache(bot, msg)
 
 	if len(bot.MessageCache) != 1 {
 		t.Errorf("Expected 1 chat in cache, got %d", len(bot.MessageCache))

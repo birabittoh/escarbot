@@ -63,7 +63,7 @@ type ReactionDetail struct {
 
 // ChatInfo represents information about a Telegram chat
 type ChatInfo struct {
-	ID       int64  `json:"id"`
+	ID       int64  `json:"id,string"`
 	Title    string `json:"title"`
 	PhotoURL string `json:"photo_url,omitempty"`
 }
@@ -71,7 +71,7 @@ type ChatInfo struct {
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
-	ChatID             int64                    `json:"chat_id"`
+	ChatID             int64                    `json:"chat_id,string"`
 	ChatTitle          string                   `json:"chat_title,omitempty"`
 	ChatPhotoURL       string                   `json:"chat_photo_url,omitempty"`
 	FromUsername       string                   `json:"from_username"`
@@ -301,7 +301,7 @@ func BotPoll(escarbot *EscarBot) {
 				}
 			}
 
-			addMessageToCache(escarbot, msg)
+			AddMessageToCache(escarbot, msg)
 
 			handleNewChatMembers(escarbot, msg)
 
@@ -319,16 +319,16 @@ func BotPoll(escarbot *EscarBot) {
 			handleChatMemberUpdate(escarbot, update.ChatMember)
 		}
 		if update.ChannelPost != nil { // If we got a channel post
-			addMessageToCache(escarbot, update.ChannelPost)
+			AddMessageToCache(escarbot, update.ChannelPost)
 			if channelForward {
 				channelPostHandler(escarbot, update.ChannelPost)
 			}
 		}
 		if update.EditedMessage != nil {
-			updateMessageInCache(escarbot, update.EditedMessage)
+			UpdateMessageInCache(escarbot, update.EditedMessage)
 		}
 		if update.EditedChannelPost != nil {
-			updateMessageInCache(escarbot, update.EditedChannelPost)
+			UpdateMessageInCache(escarbot, update.EditedChannelPost)
 		}
 		if update.MessageReactionCount != nil {
 			updateReactionsInCache(escarbot, update.MessageReactionCount)

@@ -272,8 +272,9 @@ func chatsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		for _, chat := range bot.ChatCache {
 			chats = append(chats, chat)
 		}
-		log.Printf("Chats request: returning %d chats", len(chats))
-		json.NewEncoder(w).Encode(chats)
+		jsonData, _ := json.Marshal(chats)
+		log.Printf("Chats request: returning %d chats. JSON: %s", len(chats), string(jsonData))
+		w.Write(jsonData)
 	}
 }
 
@@ -289,11 +290,9 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			chatIDs = append(chatIDs, id)
 		}
 
-		log.Printf("Message cache request from %s: returning messages for %d chats: %v", r.RemoteAddr, len(bot.MessageCache), chatIDs)
-		err := json.NewEncoder(w).Encode(bot.MessageCache)
-		if err != nil {
-			log.Printf("Error encoding message cache: %v", err)
-		}
+		jsonData, _ := json.Marshal(bot.MessageCache)
+		log.Printf("Message cache request from %s: returning messages for %d chats: %v. JSON length: %d", r.RemoteAddr, len(bot.MessageCache), chatIDs, len(jsonData))
+		w.Write(jsonData)
 	}
 }
 
