@@ -258,6 +258,21 @@ func bannedWordsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
+func chatsHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		bot.CacheMutex.Lock()
+		defer bot.CacheMutex.Unlock()
+
+		chats := make([]telegram.ChatInfo, 0, len(bot.ChatCache))
+		for _, chat := range bot.ChatCache {
+			chats = append(chats, chat)
+		}
+		json.NewEncoder(w).Encode(chats)
+	}
+}
+
 func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -265,7 +280,7 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.CacheMutex.Lock()
 		defer bot.CacheMutex.Unlock()
 
-		log.Printf("Message cache request: returning %d total messages", len(bot.MessageCache))
+		log.Printf("Message cache request: returning messages for %d chats", len(bot.MessageCache))
 		json.NewEncoder(w).Encode(bot.MessageCache)
 	}
 }
@@ -307,11 +322,12 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 		// Update BotReaction in cache and broadcast
 		bot.CacheMutex.Lock()
-		for i, msg := range bot.MessageCache {
-			if msg.MessageID == messageID && msg.ChatID == chatID {
-				bot.MessageCache[i].BotReaction = emoji
+		chatMessages := bot.MessageCache[chatID]
+		for i, msg := range chatMessages {
+			if msg.MessageID == messageID {
+				bot.MessageCache[chatID][i].BotReaction = emoji
 				if bot.OnMessageCached != nil {
-					bot.OnMessageCached(bot.MessageCache[i])
+					bot.OnMessageCached(bot.MessageCache[chatID][i])
 				}
 				break
 			}
@@ -396,6 +412,7 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setAdmin", adminHandler(bot))
 	r.HandleFunc("/setReplacer", replacerHandler(bot))
 	r.HandleFunc("/setBannedWords", bannedWordsHandler(bot))
+	r.HandleFunc("/api/chats", chatsHandler(bot))
 	r.HandleFunc("/api/messageCache", messageCacheHandler(bot))
 	r.HandleFunc("/api/media", mediaHandler(bot))
 	r.HandleFunc("/setReaction", setReactionHandler(bot))

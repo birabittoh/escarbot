@@ -30,7 +30,8 @@ type EscarBot struct {
 	LogChannelID       int64
 	BannedWords        []string
 	AvailableReactions map[int64][]string
-	MessageCache       []CachedMessage
+	MessageCache       map[int64][]CachedMessage
+	ChatCache          map[int64]ChatInfo
 	CacheMutex         sync.Mutex
 	StateMutex         sync.RWMutex
 	MaxCacheSize       int
@@ -59,11 +60,19 @@ type ReactionDetail struct {
 	Emoji string `json:"emoji"`
 }
 
+// ChatInfo represents information about a Telegram chat
+type ChatInfo struct {
+	ID       int64  `json:"id"`
+	Title    string `json:"title"`
+	PhotoURL string `json:"photo_url,omitempty"`
+}
+
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
 	ChatID             int64                    `json:"chat_id"`
 	ChatTitle          string                   `json:"chat_title,omitempty"`
+	ChatPhotoURL       string                   `json:"chat_photo_url,omitempty"`
 	FromUsername       string                   `json:"from_username"`
 	FromFirstName      string                   `json:"from_first_name"`
 	Text               string                   `json:"text"`
@@ -223,7 +232,8 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		LogChannelID:       logChannelIdInt,
 		BannedWords:        bannedWords,
 		AvailableReactions: availableReactionsMap,
-		MessageCache:       make([]CachedMessage, 0, maxCacheSize),
+		MessageCache:       make(map[int64][]CachedMessage),
+		ChatCache:          make(map[int64]ChatInfo),
 		MaxCacheSize:       maxCacheSize,
 		WelcomeText:        os.Getenv("WELCOME_TEXT"),
 		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
