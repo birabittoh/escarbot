@@ -289,12 +289,12 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		emoji := r.Form.Get("emoji")
 
 		// Build reaction list; empty emoji means remove the reaction
-		var reactions []tgbotapi.ReactionType
+		reactions := []tgbotapi.ReactionType{}
 		if emoji != "" {
-			reactions = []tgbotapi.ReactionType{{
+			reactions = append(reactions, tgbotapi.ReactionType{
 				Type:  "emoji",
 				Emoji: emoji,
-			}}
+			})
 		}
 
 		reactionConfig := tgbotapi.NewSetMessageReaction(chatID, messageID, reactions, false)
