@@ -42,8 +42,15 @@ type EscarBot struct {
 	EnabledReplacers   map[string]bool
 	PendingCaptchas    map[int64]*PendingCaptcha
 	CaptchaMutex       sync.RWMutex
-	JoinProcessedCache map[int64]time.Time
+	JoinProcessedCache map[int64]*JoinProcessedEntry
 	JoinCacheMutex     sync.Mutex
+}
+
+// JoinProcessedEntry represents a join event that was already processed
+type JoinProcessedEntry struct {
+	Time      time.Time
+	JoinMsgID int
+	IsBanned  bool
 }
 
 // MessageHistory represents a previous version of a message
@@ -231,7 +238,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		CaptchaText:        os.Getenv("CAPTCHA_TEXT"),
 		EnabledReplacers:   enabledReplacers,
 		PendingCaptchas:    make(map[int64]*PendingCaptcha),
-		JoinProcessedCache: make(map[int64]time.Time),
+		JoinProcessedCache: make(map[int64]*JoinProcessedEntry),
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
