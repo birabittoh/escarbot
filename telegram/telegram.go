@@ -12,6 +12,7 @@ import (
 )
 
 const maxCacheSize = 100
+const startupGracePeriod = 5 * time.Minute
 
 type EscarBot struct {
 	Bot                *tgbotapi.BotAPI
@@ -46,6 +47,9 @@ type EscarBot struct {
 	CaptchaMutex       sync.RWMutex
 	JoinProcessedCache map[int64]*JoinProcessedEntry
 	JoinCacheMutex     sync.Mutex
+	VerifiedUsers      map[int64]bool
+	VerifiedMutex      sync.RWMutex
+	StartupTime        time.Time
 }
 
 // JoinProcessedEntry represents a join event that was already processed
@@ -258,6 +262,8 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		EnabledReplacers:   enabledReplacers,
 		PendingCaptchas:    make(map[int64]*PendingCaptcha),
 		JoinProcessedCache: make(map[int64]*JoinProcessedEntry),
+		VerifiedUsers:      make(map[int64]bool),
+		StartupTime:        time.Now(),
 	}
 
 	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
@@ -305,6 +311,35 @@ func BotPoll(escarbot *EscarBot) {
 				if isUserPendingCaptcha(escarbot, msg.From.ID) {
 					deleteMessages(escarbot, msg.Chat.ID, msg.MessageID)
 					continue
+				}
+
+				// Check for unverified users who may have bypassed join detection
+				// (e.g. Telegram Premium users joining silently)
+				if !msg.From.IsBot && !isUserVerified(escarbot, msg.From.ID) {
+					if time.Since(escarbot.StartupTime) < startupGracePeriod {
+						// During startup grace period, auto-verify existing members
+						addVerifiedUser(escarbot, msg.From.ID)
+					} else {
+						// After grace period, check if user is an admin/creator
+						memberConfig := tgbotapi.GetChatMemberConfig{
+							ChatConfigWithUser: tgbotapi.ChatConfigWithUser{
+								ChatConfig: tgbotapi.ChatConfig{
+									ChatID: groupID,
+								},
+								UserID: msg.From.ID,
+							},
+						}
+						member, err := escarbot.Bot.GetChatMember(memberConfig)
+						if err == nil && (member.IsAdministrator() || member.IsCreator()) {
+							addVerifiedUser(escarbot, msg.From.ID)
+						} else {
+							// Unverified non-admin user - trigger captcha flow
+							log.Printf("Unverified user %d detected sending message, triggering captcha", msg.From.ID)
+							deleteMessages(escarbot, msg.Chat.ID, msg.MessageID)
+							processJoin(escarbot, msg.Chat.ID, *msg.From, 0)
+							continue
+						}
+					}
 				}
 			}
 

@@ -341,6 +341,77 @@ func banAndCleanup(escarbot *EscarBot, chatID int64, user tgbotapi.User, message
 	deleteMessages(escarbot, chatID, messageIDs...)
 }
 
+// restrictUser restricts a user's chat permissions (prevents sending messages)
+func restrictUser(escarbot *EscarBot, chatID int64, userID int64) {
+	permissions := tgbotapi.ChatPermissions{}
+	restrictConfig := tgbotapi.RestrictChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatConfig: tgbotapi.ChatConfig{
+				ChatID: chatID,
+			},
+			UserID: userID,
+		},
+		Permissions: &permissions,
+	}
+
+	_, err := escarbot.Bot.Request(restrictConfig)
+	if err != nil {
+		log.Printf("Error restricting user %d in chat %d: %v", userID, chatID, err)
+	} else {
+		log.Printf("Restricted user %d in chat %d", userID, chatID)
+	}
+}
+
+// unrestrictUser restores a user's chat permissions
+func unrestrictUser(escarbot *EscarBot, chatID int64, userID int64) {
+	permissions := tgbotapi.ChatPermissions{
+		CanSendMessages:       true,
+		CanSendAudios:         true,
+		CanSendDocuments:      true,
+		CanSendPhotos:         true,
+		CanSendVideos:         true,
+		CanSendVideoNotes:     true,
+		CanSendVoiceNotes:     true,
+		CanSendPolls:          true,
+		CanSendOtherMessages:  true,
+		CanAddWebPagePreviews: true,
+		CanChangeInfo:         true,
+		CanInviteUsers:        true,
+		CanPinMessages:        true,
+		CanManageTopics:       true,
+	}
+	restrictConfig := tgbotapi.RestrictChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatConfig: tgbotapi.ChatConfig{
+				ChatID: chatID,
+			},
+			UserID: userID,
+		},
+		Permissions: &permissions,
+	}
+
+	_, err := escarbot.Bot.Request(restrictConfig)
+	if err != nil {
+		log.Printf("Error unrestricting user %d in chat %d: %v", userID, chatID, err)
+	} else {
+		log.Printf("Unrestricted user %d in chat %d", userID, chatID)
+	}
+}
+
+// isUserVerified checks if a user has been verified (completed captcha or known member)
+func isUserVerified(escarbot *EscarBot, userID int64) bool {
+	escarbot.VerifiedMutex.RLock()
+	defer escarbot.VerifiedMutex.RUnlock()
+	return escarbot.VerifiedUsers[userID]
+}
+
+// addVerifiedUser marks a user as verified
+func addVerifiedUser(escarbot *EscarBot, userID int64) {
+	escarbot.VerifiedMutex.Lock()
+	defer escarbot.VerifiedMutex.Unlock()
+	escarbot.VerifiedUsers[userID] = true
+}
+
 // AddMessageToCache adds a message to the recent messages cache
 func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if message == nil {
