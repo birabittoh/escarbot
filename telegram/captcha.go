@@ -86,7 +86,6 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 
 	// 4. Store state
 	escarbot.CaptchaMutex.Lock()
-	defer escarbot.CaptchaMutex.Unlock()
 
 	// Stop existing timer if any (e.g. user rejoined quickly)
 	if existing, ok := escarbot.PendingCaptchas[user.ID]; ok && existing.ExpirationTimer != nil {
@@ -106,7 +105,12 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		Attempts:        attempts,
 		ExpirationTimer: timer,
 	}
+	escarbot.CaptchaMutex.Unlock()
+
 	log.Printf("Captcha sent to user %d in chat %d, answer: %s", user.ID, chatID, answerStr)
+
+	// 5. Restrict user permissions while they solve the captcha
+	restrictUser(escarbot, chatID, user.ID)
 }
 
 func isUserPendingCaptcha(escarbot *EscarBot, userID int64) bool {
@@ -175,6 +179,10 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 		// Success!
 		callbackConfig := tgbotapi.NewCallback(callback.ID, "Correct!")
 		escarbot.Bot.Request(callbackConfig)
+
+		// Unrestrict user and mark as verified
+		unrestrictUser(escarbot, pending.ChatID, targetUserID)
+		addVerifiedUser(escarbot, targetUserID)
 
 		// Delete captcha message
 		deleteMessages(escarbot, pending.ChatID, pending.CaptchaMsgID)
