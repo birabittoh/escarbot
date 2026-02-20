@@ -22,6 +22,53 @@ type PendingCaptcha struct {
 	ExpirationTimer *time.Timer
 }
 
+func restrictUser(escarbot *EscarBot, chatID int64, userID int64) {
+	permissions := tgbotapi.ChatPermissions{}
+	restrictConfig := tgbotapi.RestrictChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatConfig: tgbotapi.ChatConfig{
+				ChatID: chatID,
+			},
+			UserID: userID,
+		},
+		UntilDate:   0,
+		Permissions: &permissions,
+	}
+	_, err := escarbot.Bot.Request(restrictConfig)
+	if err != nil {
+		log.Printf("Error restricting user %d: %v", userID, err)
+	} else {
+		log.Printf("User %d restricted in chat %d", userID, chatID)
+	}
+}
+
+func unrestrictUser(escarbot *EscarBot, chatID int64, userID int64) {
+	permissions := tgbotapi.ChatPermissions{
+		CanSendMessages:      true,
+		CanSendPolls:         true,
+		CanSendOtherMessages: true,
+		CanAddWebPagePreviews: true,
+		CanInviteUsers:       true,
+	}
+	permissions.SetCanSendMediaMessages(true)
+	restrictConfig := tgbotapi.RestrictChatMemberConfig{
+		ChatMemberConfig: tgbotapi.ChatMemberConfig{
+			ChatConfig: tgbotapi.ChatConfig{
+				ChatID: chatID,
+			},
+			UserID: userID,
+		},
+		UntilDate:   0,
+		Permissions: &permissions,
+	}
+	_, err := escarbot.Bot.Request(restrictConfig)
+	if err != nil {
+		log.Printf("Error unrestricting user %d: %v", userID, err)
+	} else {
+		log.Printf("User %d unrestricted in chat %d", userID, chatID)
+	}
+}
+
 func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID int, attempts int) {
 	// 1. Generate random 4-digit answer
 	answerInt := 1000 + rand.Intn(9000)
@@ -175,6 +222,9 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 		// Success!
 		callbackConfig := tgbotapi.NewCallback(callback.ID, "Correct!")
 		escarbot.Bot.Request(callbackConfig)
+
+		// Lift restrictions
+		unrestrictUser(escarbot, pending.ChatID, targetUserID)
 
 		// Delete captcha message
 		deleteMessages(escarbot, pending.ChatID, pending.CaptchaMsgID)

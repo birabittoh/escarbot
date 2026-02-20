@@ -121,6 +121,7 @@ func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 	}
 
 	if captcha {
+		restrictUser(escarbot, chatID, user.ID)
 		SendCaptcha(escarbot, chatID, user, joinMsgID, 0)
 		return
 	}
