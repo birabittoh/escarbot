@@ -475,6 +475,11 @@ func UpdateMessageInCache(escarbot *EscarBot, message *tgbotapi.Message) {
 
 	for i, msg := range messages {
 		if msg.MessageID == message.MessageID {
+			if msg.Text == message.Text && msg.Caption == message.Caption {
+				escarbot.CacheMutex.Unlock()
+				return
+			}
+
 			// Save current state to history
 			historyItem := MessageHistory{
 				Text:     msg.Text,
