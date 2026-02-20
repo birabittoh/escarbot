@@ -295,19 +295,6 @@ func BotPoll(escarbot *EscarBot) {
 
 		msg := update.Message
 		if msg != nil { // If we got a message
-			escarbot.StateMutex.RLock()
-			captchaEnabled := escarbot.Captcha
-			groupID := escarbot.GroupID
-			escarbot.StateMutex.RUnlock()
-
-			// If captcha is enabled, delete messages from users who haven't completed it yet
-			if captchaEnabled && msg.Chat.ID == groupID && msg.From != nil && msg.NewChatMembers == nil && msg.LeftChatMember == nil {
-				if isUserPendingCaptcha(escarbot, msg.From.ID) {
-					deleteMessages(escarbot, msg.Chat.ID, msg.MessageID)
-					continue
-				}
-			}
-
 			AddMessageToCache(escarbot, msg)
 
 			handleNewChatMembers(escarbot, msg)
