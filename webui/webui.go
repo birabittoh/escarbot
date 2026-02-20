@@ -57,13 +57,13 @@ func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
-func toggleBotProperty(w http.ResponseWriter, r *http.Request) bool {
+func toggleBotProperty(r *http.Request) bool {
 	r.ParseForm()
 	res := r.Form.Get("toggle")
 	return res == "on"
 }
 
-func getChatID(w http.ResponseWriter, r *http.Request) (int64, error) {
+func getChatID(r *http.Request) (int64, error) {
 	r.ParseForm()
 	res := r.Form.Get("id")
 	return strconv.ParseInt(res, 10, 64)
@@ -73,7 +73,7 @@ func linksHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.LinkDetection = toggleBotProperty(w, r)
+		bot.LinkDetection = toggleBotProperty(r)
 		UpdateBoolEnvVar("LINK_DETECTION", bot.LinkDetection)
 	}
 }
@@ -82,7 +82,7 @@ func channelForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.ChannelForward = toggleBotProperty(w, r)
+		bot.ChannelForward = toggleBotProperty(r)
 		UpdateBoolEnvVar("CHANNEL_FORWARD", bot.ChannelForward)
 	}
 }
@@ -91,7 +91,7 @@ func adminForwardHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.AdminForward = toggleBotProperty(w, r)
+		bot.AdminForward = toggleBotProperty(r)
 		UpdateBoolEnvVar("ADMIN_FORWARD", bot.AdminForward)
 	}
 }
@@ -100,7 +100,7 @@ func autoBanHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.AutoBan = toggleBotProperty(w, r)
+		bot.AutoBan = toggleBotProperty(r)
 		UpdateBoolEnvVar("AUTO_BAN", bot.AutoBan)
 	}
 }
@@ -109,7 +109,7 @@ func captchaHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.Captcha = toggleBotProperty(w, r)
+		bot.Captcha = toggleBotProperty(r)
 		UpdateBoolEnvVar("CAPTCHA", bot.Captcha)
 	}
 }
@@ -141,7 +141,7 @@ func welcomeMessageHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bot.StateMutex.Lock()
 		defer bot.StateMutex.Unlock()
-		bot.WelcomeMessage = toggleBotProperty(w, r)
+		bot.WelcomeMessage = toggleBotProperty(r)
 		UpdateBoolEnvVar("WELCOME_MESSAGE", bot.WelcomeMessage)
 	}
 }
@@ -171,7 +171,7 @@ func welcomeContentHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r)
+		res, err := getChatID(r)
 		if err != nil {
 			log.Println(err)
 			return
@@ -185,7 +185,7 @@ func channelHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func groupHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r)
+		res, err := getChatID(r)
 		if err != nil {
 			log.Println(err)
 			return
@@ -199,7 +199,7 @@ func groupHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 func adminHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res, err := getChatID(w, r)
+		res, err := getChatID(r)
 		if err != nil {
 			log.Println(err)
 			return
