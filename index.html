@@ -805,7 +805,7 @@
                     </div>
                     <form onsubmit="updateCaptchaConfig(event)">
                         <div class="input-group">
-                            <label class="input-label" for="captchaText">Captcha text (Markdown)</label>
+                            <label class="input-label" for="captchaText">Captcha text (HTML)</label>
                             <textarea id="captchaText" name="captchaText" placeholder="Enter captcha message...">{{ .CaptchaText }}</textarea>
                         </div>
                         <div class="input-grid">
@@ -836,7 +836,7 @@
                     </div>
                     <form id="welcomeSettingsForm">
                         <div class="input-group">
-                            <label class="input-label" for="welcomeText">Message text (Markdown)</label>
+                            <label class="input-label" for="welcomeText">Message text (HTML)</label>
                             <textarea id="welcomeText" name="welcomeText" placeholder="Enter welcome message...">{{ .WelcomeText }}</textarea>
                         </div>
                         <div class="input-group">
