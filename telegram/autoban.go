@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"fmt"
+	"html"
 	"log"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ func replacePlaceholders(escarbot *EscarBot, text string, user tgbotapi.User) st
 	escarbot.StateMutex.RUnlock()
 
 	replaced := strings.ReplaceAll(text, "{GROUP_ID}", strconv.FormatInt(groupID, 10))
-	replaced = strings.ReplaceAll(replaced, "{USER_NAME}", user.FirstName)
+	replaced = strings.ReplaceAll(replaced, "{USER_NAME}", html.EscapeString(user.FirstName))
 	replaced = strings.ReplaceAll(replaced, "{USER_ID}", strconv.FormatInt(user.ID, 10))
 	return replaced
 }
@@ -157,7 +158,7 @@ func sendWelcomeMessage(escarbot *EscarBot, chatID int64, user tgbotapi.User) {
 	var welcomeMsg tgbotapi.Chattable
 	if welcomePhoto == "" {
 		msg := tgbotapi.NewMessage(chatID, replacePlaceholders(escarbot, welcomeText, user))
-		msg.ParseMode = "Markdown"
+		msg.ParseMode = "HTML"
 		if len(buttons) > 0 {
 			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 		}
@@ -165,7 +166,7 @@ func sendWelcomeMessage(escarbot *EscarBot, chatID int64, user tgbotapi.User) {
 	} else if welcomeText != "" {
 		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(welcomePhoto))
 		photo.Caption = replacePlaceholders(escarbot, welcomeText, user)
-		photo.ParseMode = "Markdown"
+		photo.ParseMode = "HTML"
 		if len(buttons) > 0 {
 			photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons...)
 		}

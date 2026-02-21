@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"fmt"
+	"html"
 	"log"
 	"math/rand"
 	"strconv"
@@ -36,7 +37,11 @@ func restrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 	}
 	_, err := escarbot.Bot.Request(restrictConfig)
 	if err != nil {
-		log.Printf("Error restricting user %d: %v", userID, err)
+		if strings.Contains(err.Error(), "method is available only for supergroups") {
+			log.Printf("Cannot restrict user %d: chat %d is not a supergroup (restriction skipped)", userID, chatID)
+		} else {
+			log.Printf("Error restricting user %d: %v", userID, err)
+		}
 	} else {
 		log.Printf("User %d restricted in chat %d", userID, chatID)
 	}
@@ -63,7 +68,11 @@ func unrestrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 	}
 	_, err := escarbot.Bot.Request(restrictConfig)
 	if err != nil {
-		log.Printf("Error unrestricting user %d: %v", userID, err)
+		if strings.Contains(err.Error(), "method is available only for supergroups") {
+			log.Printf("Cannot unrestrict user %d: chat %d is not a supergroup (unrestriction skipped)", userID, chatID)
+		} else {
+			log.Printf("Error unrestricting user %d: %v", userID, err)
+		}
 	} else {
 		log.Printf("User %d unrestricted in chat %d", userID, chatID)
 	}
@@ -94,12 +103,12 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 
 	photo := tgbotapi.NewPhoto(chatID, file)
 	if captchaText == "" {
-		photo.Caption = fmt.Sprintf("Welcome %s! Please solve the captcha within %d seconds to join the group.", user.FirstName, timeout)
+		photo.Caption = fmt.Sprintf("Welcome %s! Please solve the captcha within %d seconds to join the group.", html.EscapeString(user.FirstName), timeout)
 	} else {
 		photo.Caption = replacePlaceholders(escarbot, captchaText, user)
 		photo.Caption = strings.ReplaceAll(photo.Caption, "{TIMEOUT}", strconv.Itoa(timeout))
 	}
-	photo.ParseMode = "Markdown"
+	photo.ParseMode = "HTML"
 
 	// Add buttons
 	var buttons []tgbotapi.InlineKeyboardButton
