@@ -623,6 +623,37 @@
             max-width: 100%;
             object-fit: contain;
         }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: rgba(139, 92, 246, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            font-weight: 500;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -931,6 +962,8 @@
         <div class="reaction-picker-grid" id="reactionGrid"></div>
     </div>
 
+    <div id="toast-container"></div>
+
     <script>
         const baseUrl = "https://api.telegram.org/bot{{ .Bot.Token }}/";
         window.messageCache = {};
@@ -1129,6 +1162,17 @@
             return div.innerHTML;
         }
 
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
         // --- Messaging ---
         document.getElementById("customMessageButton").addEventListener("click", (e) => {
             const btn = e.target;
@@ -1288,7 +1332,7 @@
             sidebar.innerHTML = window.chats.map(chat => {
                 const chatIdStr = String(chat.id);
                 return `
-                    <div class="chat-item ${chatIdStr === window.selectedChatId ? 'active' : ''}" onclick="selectChat('${chatIdStr}')">
+                    <div class="chat-item ${chatIdStr === window.selectedChatId ? 'active' : ''}" onclick="selectChat('${chatIdStr}', true)">
                         <img class="chat-propic" src="${chat.photo_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(chat.title || 'C')}" alt="">
                         <div class="chat-info-mini">
                             <div class="chat-name-mini">${escapeHTML(chat.title || 'Unknown Chat')}</div>
@@ -1299,11 +1343,18 @@
             }).join('');
         }
 
-        function selectChat(chatId) {
+        function selectChat(chatId, isUserClick = false) {
             window.selectedChatId = String(chatId);
             localStorage.setItem('selectedChatId', window.selectedChatId);
             // Update Recipient ID field
             document.getElementById('recipientId').value = chatId;
+
+            if (isUserClick) {
+                document.getElementById('replyToMessageId').value = '';
+                document.getElementById('threadId').value = '';
+                showToast('✓ Chat selected');
+            }
+
             renderChats();
             renderMessages();
         }
@@ -1389,12 +1440,7 @@
             document.getElementById('customMessage').focus();
 
             // Visual feedback
-            const btn = document.getElementById('customMessageButton');
-            const originalText = btn.textContent;
-            btn.textContent = '✓ Message selected';
-            setTimeout(() => {
-                btn.textContent = originalText;
-            }, 1500);
+            showToast('✓ Message selected');
         }
 
         // --- Reactions ---
