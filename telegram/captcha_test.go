@@ -6,22 +6,22 @@ import (
 
 func TestIsUserPendingCaptcha(t *testing.T) {
 	bot := &EscarBot{
-		PendingCaptchas: make(map[int64]*PendingCaptcha),
+		Cache: NewCache(""), // in-memory mode
 	}
 
 	userID := int64(12345)
 
 	if isUserPendingCaptcha(bot, userID) {
-		t.Errorf("isUserPendingCaptcha() = true, want false for empty map")
+		t.Errorf("isUserPendingCaptcha() = true, want false for empty cache")
 	}
 
-	bot.PendingCaptchas[userID] = &PendingCaptcha{UserID: userID}
+	bot.Cache.SetCaptcha(userID, &PendingCaptcha{UserID: userID}, 0)
 
 	if !isUserPendingCaptcha(bot, userID) {
-		t.Errorf("isUserPendingCaptcha() = false, want true for user in map")
+		t.Errorf("isUserPendingCaptcha() = false, want true for user in cache")
 	}
 
-	delete(bot.PendingCaptchas, userID)
+	bot.Cache.DeleteCaptcha(userID)
 
 	if isUserPendingCaptcha(bot, userID) {
 		t.Errorf("isUserPendingCaptcha() = true, want false after deletion")

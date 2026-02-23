@@ -14,52 +14,44 @@ import (
 const maxCacheSize = 100
 
 type EscarBot struct {
-	Bot                *tgbotapi.BotAPI
-	Power              bool
-	LinkDetection      bool
-	ChannelForward     bool
-	AdminForward       bool
-	AutoBan            bool
-	Captcha            bool
-	CaptchaTimeout     int
-	CaptchaMaxRetries  int
-	WelcomeMessage     bool
-	ChannelID          int64
-	GroupID            int64
-	AdminID            int64
-	LogChannelID       int64
-	BannedWords        []string
-	AvailableReactions map[int64][]string
-	MessageCache       map[int64][]CachedMessage
-	ChatCache          map[int64]ChatInfo
-	CacheMutex         sync.Mutex
-	ReactionMutex      sync.Mutex
-	StateMutex         sync.RWMutex
-	MaxCacheSize       int
-	OnMessageCached    func(CachedMessage) // Callback for when a message is cached
-	WelcomeText        string
-	WelcomeLinks       string
-	WelcomePhoto       string
-	CaptchaText        string
-	EnabledReplacers   map[string]bool
-	PendingCaptchas    map[int64]*PendingCaptcha
-	CaptchaMutex       sync.RWMutex
-	JoinProcessedCache map[int64]*JoinProcessedEntry
-	JoinCacheMutex     sync.Mutex
+	Bot               *tgbotapi.BotAPI
+	Power             bool
+	LinkDetection     bool
+	ChannelForward    bool
+	AdminForward      bool
+	AutoBan           bool
+	Captcha           bool
+	CaptchaTimeout    int
+	CaptchaMaxRetries int
+	WelcomeMessage    bool
+	ChannelID         int64
+	GroupID           int64
+	AdminID           int64
+	LogChannelID      int64
+	BannedWords       []string
+	StateMutex        sync.RWMutex
+	MaxCacheSize      int
+	OnMessageCached   func(CachedMessage) // Callback for when a message is cached
+	WelcomeText       string
+	WelcomeLinks      string
+	WelcomePhoto      string
+	CaptchaText       string
+	EnabledReplacers  map[string]bool
+	Cache             *Cache
 }
 
 // JoinProcessedEntry represents a join event that was already processed
 type JoinProcessedEntry struct {
-	Time      time.Time
-	JoinMsgID int
-	IsBanned  bool
+	Time      time.Time `json:"time"`
+	JoinMsgID int       `json:"join_msg_id"`
+	IsBanned  bool      `json:"is_banned"`
 }
 
 // MessageHistory represents a previous version of a message
 type MessageHistory struct {
 	Text     string `json:"text"`
 	Caption  string `json:"caption,omitempty"`
-	EditDate int    `json:"edit_date"`
+	EditDate int64  `json:"edit_date"`
 }
 
 // ReactionDetail represents an individual reaction by a user
@@ -97,27 +89,18 @@ type CachedMessage struct {
 	History            []MessageHistory         `json:"history,omitempty"`
 }
 
-// getAvailableReactions returns the available reactions for a chat
-// If not cached, it fetches them from Telegram API
+// getAvailableReactions returns the available reactions for a chat,
+// fetching from the Telegram API and caching on first call.
 func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
-	// Check if already cached
-	escarbot.ReactionMutex.Lock()
-	if escarbot.AvailableReactions == nil {
-		escarbot.AvailableReactions = make(map[int64][]string)
-	}
-	if reactions, exists := escarbot.AvailableReactions[chatID]; exists {
-		escarbot.ReactionMutex.Unlock()
+	if reactions, ok := escarbot.Cache.GetReactions(chatID); ok {
 		return reactions
 	}
-	escarbot.ReactionMutex.Unlock()
 
-	// Not cached, fetch from API
+	// Not cached – fetch from Telegram.
 	defaultReactions := []string{"👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨"}
 
 	chatConfig := tgbotapi.ChatInfoConfig{
-		ChatConfig: tgbotapi.ChatConfig{
-			ChatID: chatID,
-		},
+		ChatConfig: tgbotapi.ChatConfig{ChatID: chatID},
 	}
 	chatInfo, err := escarbot.Bot.GetChat(chatConfig)
 
@@ -126,10 +109,8 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 		log.Printf("Warning: could not get chat info for reactions (chat %d): %v", chatID, err)
 		reactions = defaultReactions
 	} else if len(chatInfo.AvailableReactions) == 0 {
-		// Empty means all reactions are allowed
 		reactions = defaultReactions
 	} else {
-		// Extract emoji reactions
 		for _, reaction := range chatInfo.AvailableReactions {
 			if reaction.Type == "emoji" && reaction.Emoji != "" {
 				reactions = append(reactions, reaction.Emoji)
@@ -140,12 +121,8 @@ func getAvailableReactions(escarbot *EscarBot, chatID int64) []string {
 		}
 	}
 
-	// Cache the result
-	escarbot.ReactionMutex.Lock()
-	escarbot.AvailableReactions[chatID] = reactions
-	escarbot.ReactionMutex.Unlock()
+	escarbot.Cache.SetReactions(chatID, reactions)
 	log.Printf("Loaded %d available reactions for chat %d", len(reactions), chatID)
-
 	return reactions
 }
 
@@ -153,13 +130,10 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
 		log.Printf("Warning: failed to initialize bot with token: %v", err)
-		// For testing/development, create a mock bot if token is dummy or invalid
 		bot = &tgbotapi.BotAPI{Self: tgbotapi.User{UserName: "OfflineBot"}}
 	} else {
 		log.Printf("Authorized on account %s", bot.Self.UserName)
 	}
-
-	//bot.Debug = true
 
 	channelIdInt, err := strconv.ParseInt(channelId, 10, 64)
 	if err != nil {
@@ -181,39 +155,34 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		log.Fatal("Error while converting LOG_CHANNEL_ID to int64:", err)
 	}
 
-	// Read banned words from environment variable (comma-separated)
 	bannedWordsEnv := os.Getenv("BANNED_WORDS")
 	var bannedWords []string
 	if bannedWordsEnv != "" {
 		bannedWords = strings.Split(bannedWordsEnv, ",")
-		// Trim whitespace from each word
 		for i, word := range bannedWords {
 			bannedWords[i] = strings.TrimSpace(word)
 		}
 		log.Printf("Loaded %d banned words from BANNED_WORDS env", len(bannedWords))
 	} else {
-		// Default banned words if env not set
 		bannedWords = []string{"18+"}
 		log.Printf("Using default banned words: %v", bannedWords)
 	}
 
-	// Read boolean settings from environment (default to true if not set)
 	linkDetection := getBoolEnv("LINK_DETECTION", true)
 	channelForward := getBoolEnv("CHANNEL_FORWARD", true)
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
 	captcha := getBoolEnv("CAPTCHA", true)
-	captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT")
+
 	captchaTimeout := 120
-	if captchaTimeoutStr != "" {
+	if captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT"); captchaTimeoutStr != "" {
 		if val, err := strconv.Atoi(captchaTimeoutStr); err == nil {
 			captchaTimeout = val
 		}
 	}
 
-	captchaMaxRetriesStr := os.Getenv("CAPTCHA_MAX_RETRIES")
 	captchaMaxRetries := 2
-	if captchaMaxRetriesStr != "" {
+	if captchaMaxRetriesStr := os.Getenv("CAPTCHA_MAX_RETRIES"); captchaMaxRetriesStr != "" {
 		if val, err := strconv.Atoi(captchaMaxRetriesStr); err == nil {
 			captchaMaxRetries = val
 		}
@@ -221,46 +190,41 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
-	// Initialize enabled replacers
 	enabledReplacers := make(map[string]bool)
 	for _, replacer := range GetReplacers() {
 		envKey := "REPLACER_" + strings.ReplaceAll(strings.ToUpper(replacer.Name), " ", "_") + "_ENABLED"
 		enabledReplacers[replacer.Name] = getBoolEnv(envKey, true)
 	}
 
-	// Get available reactions for the group
-	availableReactionsMap := make(map[int64][]string)
+	valkeyAddr := os.Getenv("VALKEY_ADDR")
+	cache := NewCache(valkeyAddr)
 
 	escarbot := &EscarBot{
-		Bot:                bot,
-		Power:              true,
-		LinkDetection:      linkDetection,
-		ChannelForward:     channelForward,
-		AdminForward:       adminForward,
-		AutoBan:            autoBan,
-		Captcha:            captcha,
-		CaptchaTimeout:     captchaTimeout,
-		CaptchaMaxRetries:  captchaMaxRetries,
-		WelcomeMessage:     welcomeMessage,
-		ChannelID:          channelIdInt,
-		GroupID:            groupIdInt,
-		AdminID:            adminIdInt,
-		LogChannelID:       logChannelIdInt,
-		BannedWords:        bannedWords,
-		AvailableReactions: availableReactionsMap,
-		MessageCache:       make(map[int64][]CachedMessage),
-		ChatCache:          make(map[int64]ChatInfo),
-		MaxCacheSize:       maxCacheSize,
-		WelcomeText:        os.Getenv("WELCOME_TEXT"),
-		WelcomeLinks:       os.Getenv("WELCOME_LINKS"),
-		WelcomePhoto:       os.Getenv("WELCOME_PHOTO"),
-		CaptchaText:        os.Getenv("CAPTCHA_TEXT"),
-		EnabledReplacers:   enabledReplacers,
-		PendingCaptchas:    make(map[int64]*PendingCaptcha),
-		JoinProcessedCache: make(map[int64]*JoinProcessedEntry),
+		Bot:               bot,
+		Power:             true,
+		LinkDetection:     linkDetection,
+		ChannelForward:    channelForward,
+		AdminForward:      adminForward,
+		AutoBan:           autoBan,
+		Captcha:           captcha,
+		CaptchaTimeout:    captchaTimeout,
+		CaptchaMaxRetries: captchaMaxRetries,
+		WelcomeMessage:    welcomeMessage,
+		ChannelID:         channelIdInt,
+		GroupID:           groupIdInt,
+		AdminID:           adminIdInt,
+		LogChannelID:      logChannelIdInt,
+		BannedWords:       bannedWords,
+		MaxCacheSize:      maxCacheSize,
+		WelcomeText:       os.Getenv("WELCOME_TEXT"),
+		WelcomeLinks:      os.Getenv("WELCOME_LINKS"),
+		WelcomePhoto:      os.Getenv("WELCOME_PHOTO"),
+		CaptchaText:       os.Getenv("CAPTCHA_TEXT"),
+		EnabledReplacers:  enabledReplacers,
+		Cache:             cache,
 	}
 
-	availableReactionsMap[groupIdInt] = getAvailableReactions(escarbot, groupIdInt)
+	getAvailableReactions(escarbot, groupIdInt)
 
 	return escarbot
 }
@@ -294,11 +258,9 @@ func BotPoll(escarbot *EscarBot) {
 		escarbot.StateMutex.RUnlock()
 
 		msg := update.Message
-		if msg != nil { // If we got a message
+		if msg != nil {
 			AddMessageToCache(escarbot, msg)
-
 			handleNewChatMembers(escarbot, msg)
-
 			if linkDetection {
 				handleLinks(escarbot, msg)
 			}
@@ -312,7 +274,7 @@ func BotPoll(escarbot *EscarBot) {
 		if update.ChatMember != nil {
 			handleChatMemberUpdate(escarbot, update.ChatMember)
 		}
-		if update.ChannelPost != nil { // If we got a channel post
+		if update.ChannelPost != nil {
 			AddMessageToCache(escarbot, update.ChannelPost)
 			if channelForward {
 				channelPostHandler(escarbot, update.ChannelPost)

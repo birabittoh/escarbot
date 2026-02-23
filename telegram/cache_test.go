@@ -2,16 +2,15 @@ package telegram
 
 import (
 	"testing"
+
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 func TestAddMessageToCache(t *testing.T) {
 	bot := &EscarBot{
-		MessageCache:       make(map[int64][]CachedMessage),
-		ChatCache:          make(map[int64]ChatInfo),
-		AvailableReactions: make(map[int64][]string),
-		MaxCacheSize:       10,
-		Bot:                &tgbotapi.BotAPI{}, // Mock
+		Cache:        NewCache(""), // in-memory mode
+		MaxCacheSize: 10,
+		Bot:          &tgbotapi.BotAPI{}, // Mock
 	}
 
 	msg := &tgbotapi.Message{
@@ -26,22 +25,17 @@ func TestAddMessageToCache(t *testing.T) {
 		Text: "Hello",
 	}
 
-	// We need to avoid the GetChat call or mock it.
-	// Since GetChat is called if chat doesn't exist in ChatCache.
-	// Let's pre-populate ChatCache.
-	bot.ChatCache[123] = ChatInfo{ID: 123, Title: "Test Chat"}
+	// Pre-populate chat cache so AddMessageToCache skips the GetChat API call.
+	bot.Cache.SetChatInfo(123, ChatInfo{ID: 123, Title: "Test Chat"})
 
 	AddMessageToCache(bot, msg)
 
-	if len(bot.MessageCache) != 1 {
-		t.Errorf("Expected 1 chat in cache, got %d", len(bot.MessageCache))
+	allMsgs := bot.Cache.GetAllMessages()
+	if len(allMsgs) != 1 {
+		t.Errorf("Expected 1 chat in cache, got %d", len(allMsgs))
 	}
 
-	msgs, ok := bot.MessageCache[123]
-	if !ok {
-		t.Fatal("Chat 123 not found in cache")
-	}
-
+	msgs := bot.Cache.GetMessages(123)
 	if len(msgs) != 1 {
 		t.Errorf("Expected 1 message in chat 123, got %d", len(msgs))
 	}

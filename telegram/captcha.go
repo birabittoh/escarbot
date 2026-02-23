@@ -27,10 +27,8 @@ func restrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 	permissions := tgbotapi.ChatPermissions{}
 	restrictConfig := tgbotapi.RestrictChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
-			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: chatID,
-			},
-			UserID: userID,
+			ChatConfig: tgbotapi.ChatConfig{ChatID: chatID},
+			UserID:     userID,
 		},
 		UntilDate:   0,
 		Permissions: &permissions,
@@ -49,19 +47,17 @@ func restrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 
 func unrestrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 	permissions := tgbotapi.ChatPermissions{
-		CanSendMessages:      true,
-		CanSendPolls:         true,
-		CanSendOtherMessages: true,
+		CanSendMessages:       true,
+		CanSendPolls:          true,
+		CanSendOtherMessages:  true,
 		CanAddWebPagePreviews: true,
-		CanInviteUsers:       true,
+		CanInviteUsers:        true,
 	}
 	permissions.SetCanSendMediaMessages(true)
 	restrictConfig := tgbotapi.RestrictChatMemberConfig{
 		ChatMemberConfig: tgbotapi.ChatMemberConfig{
-			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: chatID,
-			},
-			UserID: userID,
+			ChatConfig: tgbotapi.ChatConfig{ChatID: chatID},
+			UserID:     userID,
 		},
 		UntilDate:   0,
 		Permissions: &permissions,
@@ -79,18 +75,15 @@ func unrestrictUser(escarbot *EscarBot, chatID int64, userID int64) {
 }
 
 func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID int, attempts int) {
-	// 1. Generate random 4-digit answer
 	answerInt := 1000 + rand.Intn(9000)
 	answerStr := strconv.Itoa(answerInt)
 
-	// 2. Generate image
 	digits := make([]byte, len(answerStr))
 	for i, char := range answerStr {
 		digits[i] = byte(char - '0')
 	}
 	captchaImage := captcha.NewImage(strconv.Itoa(int(user.ID)), digits, 240, 80)
 
-	// 3. Prepare message
 	file := tgbotapi.FileBytes{
 		Name:  "captcha.png",
 		Bytes: captchaImage.EncodedPNG(),
@@ -110,7 +103,6 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 	}
 	photo.ParseMode = "HTML"
 
-	// Add buttons
 	var buttons []tgbotapi.InlineKeyboardButton
 	correctIdx := rand.Intn(4)
 	usedAnswers := make(map[int]bool)
@@ -140,12 +132,8 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		return
 	}
 
-	// 4. Store state
-	escarbot.CaptchaMutex.Lock()
-	defer escarbot.CaptchaMutex.Unlock()
-
-	// Stop existing timer if any (e.g. user rejoined quickly)
-	if existing, ok := escarbot.PendingCaptchas[user.ID]; ok && existing.ExpirationTimer != nil {
+	// Stop existing timer if user rejoined quickly.
+	if existing, ok := escarbot.Cache.GetCaptcha(user.ID); ok && existing.ExpirationTimer != nil {
 		existing.ExpirationTimer.Stop()
 	}
 
@@ -153,7 +141,7 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		handleCaptchaTimeout(escarbot, user.ID)
 	})
 
-	escarbot.PendingCaptchas[user.ID] = &PendingCaptcha{
+	pending := &PendingCaptcha{
 		UserID:          user.ID,
 		ChatID:          chatID,
 		CorrectAnswer:   answerStr,
@@ -162,31 +150,24 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		Attempts:        attempts,
 		ExpirationTimer: timer,
 	}
+	escarbot.Cache.SetCaptcha(user.ID, pending, time.Duration(timeout)*time.Second)
 	log.Printf("Captcha sent to user %d in chat %d, answer: %s", user.ID, chatID, answerStr)
 }
 
 func isUserPendingCaptcha(escarbot *EscarBot, userID int64) bool {
-	escarbot.CaptchaMutex.RLock()
-	defer escarbot.CaptchaMutex.RUnlock()
-	_, exists := escarbot.PendingCaptchas[userID]
-	return exists
+	return escarbot.Cache.HasCaptcha(userID)
 }
 
 func handleCaptchaTimeout(escarbot *EscarBot, userID int64) {
-	escarbot.CaptchaMutex.Lock()
-	pending, exists := escarbot.PendingCaptchas[userID]
+	pending, exists := escarbot.Cache.GetCaptcha(userID)
 	if !exists {
-		escarbot.CaptchaMutex.Unlock()
 		return
 	}
-	delete(escarbot.PendingCaptchas, userID)
-	escarbot.CaptchaMutex.Unlock()
+	escarbot.Cache.DeleteCaptcha(userID)
 
 	log.Printf("User %d timed out on captcha", userID)
 
-	// Act like auto-ban
-	user := tgbotapi.User{ID: pending.UserID, FirstName: "User"} // FirstName is used in logs
-
+	user := tgbotapi.User{ID: pending.UserID, FirstName: "User"}
 	banAndCleanup(escarbot, pending.ChatID, user, pending.JoinMsgID, pending.CaptchaMsgID)
 }
 
@@ -195,7 +176,6 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 		return
 	}
 
-	// data format: captcha:userID:answer
 	parts := strings.Split(callback.Data, ":")
 	if len(parts) != 3 {
 		return
@@ -210,10 +190,8 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 		return
 	}
 
-	escarbot.CaptchaMutex.Lock()
-	pending, exists := escarbot.PendingCaptchas[targetUserID]
+	pending, exists := escarbot.Cache.GetCaptcha(targetUserID)
 	if !exists {
-		escarbot.CaptchaMutex.Unlock()
 		callbackConfig := tgbotapi.NewCallback(callback.ID, "")
 		escarbot.Bot.Request(callbackConfig)
 		return
@@ -224,21 +202,17 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 	escarbot.StateMutex.RUnlock()
 
 	if givenAnswer == pending.CorrectAnswer {
-		pending.ExpirationTimer.Stop()
-		delete(escarbot.PendingCaptchas, targetUserID)
-		escarbot.CaptchaMutex.Unlock()
+		if pending.ExpirationTimer != nil {
+			pending.ExpirationTimer.Stop()
+		}
+		escarbot.Cache.DeleteCaptcha(targetUserID)
 
-		// Success!
 		callbackConfig := tgbotapi.NewCallback(callback.ID, "Correct!")
 		escarbot.Bot.Request(callbackConfig)
 
-		// Lift restrictions
 		unrestrictUser(escarbot, pending.ChatID, targetUserID)
-
-		// Delete captcha message
 		deleteMessages(escarbot, pending.ChatID, pending.CaptchaMsgID)
 
-		// Send welcome message if enabled
 		escarbot.StateMutex.RLock()
 		welcomeEnabled := escarbot.WelcomeMessage
 		escarbot.StateMutex.RUnlock()
@@ -247,27 +221,21 @@ func HandleCaptchaCallback(escarbot *EscarBot, callback *tgbotapi.CallbackQuery)
 			sendWelcomeMessage(escarbot, pending.ChatID, *callback.From)
 		}
 	} else {
-		// Wrong answer
-		pending.ExpirationTimer.Stop()
-		delete(escarbot.PendingCaptchas, targetUserID)
-		escarbot.CaptchaMutex.Unlock()
+		if pending.ExpirationTimer != nil {
+			pending.ExpirationTimer.Stop()
+		}
+		escarbot.Cache.DeleteCaptcha(targetUserID)
 
 		log.Printf("User %d gave wrong captcha answer: %s (expected %s). Attempt: %d/%d",
 			targetUserID, givenAnswer, pending.CorrectAnswer, pending.Attempts+1, maxRetries+1)
 
+		callbackConfig := tgbotapi.NewCallback(callback.ID, "")
+		escarbot.Bot.Request(callbackConfig)
+
 		if pending.Attempts < maxRetries {
-			callbackConfig := tgbotapi.NewCallback(callback.ID, "")
-			escarbot.Bot.Request(callbackConfig)
-
-			// Delete old captcha message
 			deleteMessages(escarbot, pending.ChatID, pending.CaptchaMsgID)
-
-			// Send new captcha
 			SendCaptcha(escarbot, pending.ChatID, *callback.From, pending.JoinMsgID, pending.Attempts+1)
 		} else {
-			callbackConfig := tgbotapi.NewCallback(callback.ID, "")
-			escarbot.Bot.Request(callbackConfig)
-
 			banAndCleanup(escarbot, pending.ChatID, *callback.From, pending.JoinMsgID, pending.CaptchaMsgID)
 		}
 	}

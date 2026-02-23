@@ -37,9 +37,6 @@ func indexHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		bot.StateMutex.RLock()
 		defer bot.StateMutex.RUnlock()
 
-		bot.CacheMutex.Lock()
-		defer bot.CacheMutex.Unlock()
-
 		data := struct {
 			*telegram.EscarBot
 			AllReplacers []telegram.Replacer
@@ -234,10 +231,8 @@ func bannedWordsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
-		// Get all the words from the form
 		words := r.Form["word"]
 
-		// Filter out empty strings
 		var filteredWords []string
 		for _, word := range words {
 			trimmed := strings.TrimSpace(word)
@@ -246,12 +241,10 @@ func bannedWordsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			}
 		}
 
-		// Update bot's banned words
 		bot.StateMutex.Lock()
 		bot.BannedWords = filteredWords
 		bot.StateMutex.Unlock()
 
-		// Persist to .env
 		wordsStr := strings.Join(filteredWords, ",")
 		UpdateEnvVar("BANNED_WORDS", wordsStr)
 
@@ -265,13 +258,7 @@ func chatsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		bot.CacheMutex.Lock()
-		defer bot.CacheMutex.Unlock()
-
-		chats := make([]telegram.ChatInfo, 0, len(bot.ChatCache))
-		for _, chat := range bot.ChatCache {
-			chats = append(chats, chat)
-		}
+		chats := bot.Cache.GetAllChats()
 		jsonData, _ := json.Marshal(chats)
 		log.Printf("Chats request: returning %d chats. JSON: %s", len(chats), string(jsonData))
 		w.Write(jsonData)
@@ -282,16 +269,14 @@ func messageCacheHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		bot.CacheMutex.Lock()
-		defer bot.CacheMutex.Unlock()
-
-		chatIDs := make([]int64, 0, len(bot.MessageCache))
-		for id := range bot.MessageCache {
+		allMessages := bot.Cache.GetAllMessages()
+		chatIDs := make([]int64, 0, len(allMessages))
+		for id := range allMessages {
 			chatIDs = append(chatIDs, id)
 		}
 
-		jsonData, _ := json.Marshal(bot.MessageCache)
-		log.Printf("Message cache request from %s: returning messages for %d chats: %v. JSON length: %d", r.RemoteAddr, len(bot.MessageCache), chatIDs, len(jsonData))
+		jsonData, _ := json.Marshal(allMessages)
+		log.Printf("Message cache request from %s: returning messages for %d chats: %v. JSON length: %d", r.RemoteAddr, len(allMessages), chatIDs, len(jsonData))
 		w.Write(jsonData)
 	}
 }
@@ -314,7 +299,6 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 		emoji := r.Form.Get("emoji")
 
-		// Build reaction list; empty emoji means remove the reaction
 		reactions := []tgbotapi.ReactionType{}
 		if emoji != "" {
 			reactions = append(reactions, tgbotapi.ReactionType{
@@ -331,19 +315,10 @@ func setReactionHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			return
 		}
 
-		// Update BotReaction in cache and broadcast
-		bot.CacheMutex.Lock()
-		chatMessages := bot.MessageCache[chatID]
-		for i, msg := range chatMessages {
-			if msg.MessageID == messageID {
-				bot.MessageCache[chatID][i].BotReaction = emoji
-				if bot.OnMessageCached != nil {
-					bot.OnMessageCached(bot.MessageCache[chatID][i])
-				}
-				break
-			}
+		msg, ok := bot.Cache.SetBotReaction(chatID, messageID, emoji)
+		if ok && bot.OnMessageCached != nil {
+			bot.OnMessageCached(msg)
 		}
-		bot.CacheMutex.Unlock()
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -358,7 +333,6 @@ func mediaHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			return
 		}
 
-		// Get file path from Telegram
 		file, err := bot.Bot.GetFile(tgbotapi.FileConfig{FileID: fileID})
 		if err != nil {
 			log.Printf("Error getting file info: %v", err)
@@ -366,7 +340,6 @@ func mediaHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			return
 		}
 
-		// Construct direct URL
 		directURL, err := bot.Bot.GetFileDirectURL(file.FileID)
 		if err != nil {
 			log.Printf("Error getting direct URL: %v", err)
@@ -374,7 +347,6 @@ func mediaHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			return
 		}
 
-		// Fetch the file and stream it back
 		resp, err := http.Get(directURL)
 		if err != nil {
 			log.Printf("Error fetching media: %v", err)
@@ -388,20 +360,16 @@ func mediaHandler(bot *telegram.EscarBot) http.HandlerFunc {
 			return
 		}
 
-		// Set headers
 		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 
-		// Copy body
 		io.Copy(w, resp.Body)
 	}
 }
 
 func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
-	// Initialize WebSocket hub
 	InitMessageHub()
 
-	// Register callback for broadcasting new messages
 	bot.OnMessageCached = func(msg telegram.CachedMessage) {
 		BroadcastMessage(msg)
 	}
