@@ -11,17 +11,17 @@ services:
       - CHANNEL_ID
       - GROUP_ID
       - ADMIN_ID
-      - VALKEY_ADDR=valkey:6379
+      - VALKEY_ADDR=escarbot-cache:6379
       #- PORT
     depends_on:
-      valkey:
+      cache:
         condition: service_healthy
     #volumes:
       #- /etc/localtime:/etc/localtime:ro
 
-  valkey:
+  cache:
     image: valkey/valkey:8-alpine
-    container_name: valkey
+    container_name: escarbot-cache
     restart: unless-stopped
     command: valkey-server --save 60 1 --loglevel warning
     volumes:
