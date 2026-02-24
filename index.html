@@ -969,6 +969,7 @@
         window.messageCache = {};
         window.chats = [];
         window.selectedChatId = localStorage.getItem('selectedChatId');
+        window.chatBlacklist = ({{ .ChatBlacklist | toJSON }} || []).map(id => String(id));
         let welcomeLinksData = {{ .WelcomeLinks | toJSON }};
 
         // --- UI Switching ---
@@ -1295,19 +1296,21 @@
                     // Update chat list if it's a new chat or update info
                     const chatIndex = window.chats.findIndex(c => String(c.id) === String(chatId));
                     if (chatIndex === -1) {
-                        window.chats.push({
-                            id: chatId,
-                            title: newMsg.chat_title,
-                            photo_url: newMsg.chat_photo_url
-                        });
-                        window.chats.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                        if (!window.chatBlacklist.includes(chatId)) {
+                            window.chats.push({
+                                id: chatId,
+                                title: newMsg.chat_title,
+                                photo_url: newMsg.chat_photo_url
+                            });
+                            window.chats.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 
-                        // If no chat was selected, select this new one
-                        if (!window.selectedChatId) {
-                            selectChat(chatId);
+                            // If no chat was selected, select this new one
+                            if (!window.selectedChatId) {
+                                selectChat(chatId);
+                            }
+
+                            renderChats();
                         }
-
-                        renderChats();
                     } else if (newMsg.chat_photo_url && !window.chats[chatIndex].photo_url) {
                         window.chats[chatIndex].photo_url = newMsg.chat_photo_url;
                         renderChats();

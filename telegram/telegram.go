@@ -36,6 +36,7 @@ type EscarBot struct {
 	WelcomeLinks      string
 	WelcomePhoto      string
 	CaptchaText       string
+	ChatBlacklist     []int64
 	EnabledReplacers  map[string]bool
 	Cache             *Cache
 }
@@ -190,6 +191,17 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
+	chatBlacklistEnv := os.Getenv("CHAT_BLACKLIST")
+	var chatBlacklist []int64
+	if chatBlacklistEnv != "" {
+		for _, idStr := range strings.Split(chatBlacklistEnv, ",") {
+			if id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64); err == nil {
+				chatBlacklist = append(chatBlacklist, id)
+			}
+		}
+		log.Printf("Loaded %d chat IDs from CHAT_BLACKLIST", len(chatBlacklist))
+	}
+
 	enabledReplacers := make(map[string]bool)
 	for _, replacer := range GetReplacers() {
 		envKey := "REPLACER_" + strings.ReplaceAll(strings.ToUpper(replacer.Name), " ", "_") + "_ENABLED"
@@ -220,6 +232,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		WelcomeLinks:      os.Getenv("WELCOME_LINKS"),
 		WelcomePhoto:      os.Getenv("WELCOME_PHOTO"),
 		CaptchaText:       os.Getenv("CAPTCHA_TEXT"),
+		ChatBlacklist:     chatBlacklist,
 		EnabledReplacers:  enabledReplacers,
 		Cache:             cache,
 	}
