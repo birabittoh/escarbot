@@ -259,8 +259,28 @@ func chatsHandler(bot *telegram.EscarBot) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 
 		chats := bot.Cache.GetAllChats()
-		jsonData, _ := json.Marshal(chats)
-		log.Printf("Chats request: returning %d chats. JSON: %s", len(chats), string(jsonData))
+
+		// Filter blacklisted chats
+		bot.StateMutex.RLock()
+		blacklist := bot.ChatBlacklist
+		bot.StateMutex.RUnlock()
+
+		filteredChats := make([]telegram.ChatInfo, 0)
+		for _, chat := range chats {
+			isBlacklisted := false
+			for _, blacklistedID := range blacklist {
+				if chat.ID == blacklistedID {
+					isBlacklisted = true
+					break
+				}
+			}
+			if !isBlacklisted {
+				filteredChats = append(filteredChats, chat)
+			}
+		}
+
+		jsonData, _ := json.Marshal(filteredChats)
+		log.Printf("Chats request: returning %d chats (filtered from %d).", len(filteredChats), len(chats))
 		w.Write(jsonData)
 	}
 }
