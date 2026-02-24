@@ -68,6 +68,23 @@ type ChatInfo struct {
 	PhotoURL string `json:"photo_url,omitempty"`
 }
 
+// CachedPollOption represents a single option in a poll
+type CachedPollOption struct {
+	Text       string `json:"text"`
+	VoterCount int    `json:"voter_count"`
+}
+
+// CachedPoll represents a Telegram poll
+type CachedPoll struct {
+	Question              string             `json:"question"`
+	Options               []CachedPollOption `json:"options"`
+	TotalVoterCount       int                `json:"total_voter_count"`
+	IsClosed              bool               `json:"is_closed"`
+	IsAnonymous           bool               `json:"is_anonymous"`
+	Type                  string             `json:"type"`
+	AllowsMultipleAnswers bool               `json:"allows_multiple_answers"`
+}
+
 // CachedMessage represents a message stored in cache
 type CachedMessage struct {
 	MessageID          int                      `json:"message_id"`
@@ -80,6 +97,12 @@ type CachedMessage struct {
 	Caption            string                   `json:"caption,omitempty"`
 	MediaURL           string                   `json:"media_url,omitempty"`
 	MediaType          string                   `json:"media_type,omitempty"`
+	MediaDuration      int                      `json:"media_duration,omitempty"`
+	MediaTitle         string                   `json:"media_title,omitempty"`
+	MediaFilename      string                   `json:"media_filename,omitempty"`
+	MediaMimeType      string                   `json:"media_mime_type,omitempty"`
+	MediaFileSize      int64                    `json:"media_file_size,omitempty"`
+	Poll               *CachedPoll              `json:"poll,omitempty"`
 	Entities           []tgbotapi.MessageEntity `json:"entities,omitempty"`
 	ThreadID           int                      `json:"thread_id,omitempty"`
 	IsTopicMessage     bool                     `json:"is_topic_message"`
