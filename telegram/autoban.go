@@ -299,6 +299,11 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	}
 
 	var mediaURL, mediaType string
+	var mediaDuration int
+	var mediaTitle, mediaFilename, mediaMimeType string
+	var mediaFileSize int64
+	var poll *CachedPoll
+
 	if len(message.Photo) > 0 {
 		mediaType = "photo"
 		photo := message.Photo[len(message.Photo)-1]
@@ -306,6 +311,47 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	} else if message.Sticker != nil {
 		mediaType = "sticker"
 		mediaURL = "/api/media?file_id=" + message.Sticker.FileID
+	} else if message.Animation != nil {
+		mediaType = "animation"
+		mediaURL = "/api/media?file_id=" + message.Animation.FileID
+	} else if message.Video != nil {
+		mediaType = "video"
+		mediaURL = "/api/media?file_id=" + message.Video.FileID
+		mediaDuration = message.Video.Duration
+	} else if message.VideoNote != nil {
+		mediaType = "video_note"
+		mediaURL = "/api/media?file_id=" + message.VideoNote.FileID
+		mediaDuration = message.VideoNote.Duration
+	} else if message.Voice != nil {
+		mediaType = "voice"
+		mediaURL = "/api/media?file_id=" + message.Voice.FileID
+		mediaDuration = message.Voice.Duration
+	} else if message.Audio != nil {
+		mediaType = "audio"
+		mediaURL = "/api/media?file_id=" + message.Audio.FileID
+		mediaDuration = message.Audio.Duration
+		mediaTitle = message.Audio.Title
+	} else if message.Document != nil {
+		mediaType = "document"
+		mediaURL = "/api/media?file_id=" + message.Document.FileID
+		mediaFilename = message.Document.FileName
+		mediaMimeType = message.Document.MimeType
+		mediaFileSize = message.Document.FileSize
+	} else if message.Poll != nil {
+		mediaType = "poll"
+		options := make([]CachedPollOption, len(message.Poll.Options))
+		for i, opt := range message.Poll.Options {
+			options[i] = CachedPollOption{Text: opt.Text, VoterCount: opt.VoterCount}
+		}
+		poll = &CachedPoll{
+			Question:              message.Poll.Question,
+			Options:               options,
+			TotalVoterCount:       message.Poll.TotalVoterCount,
+			IsClosed:              message.Poll.IsClosed,
+			IsAnonymous:           message.Poll.IsAnonymous,
+			Type:                  message.Poll.Type,
+			AllowsMultipleAnswers: message.Poll.AllowsMultipleAnswers,
+		}
 	}
 
 	cached := CachedMessage{
@@ -319,6 +365,12 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		Caption:            message.Caption,
 		MediaURL:           mediaURL,
 		MediaType:          mediaType,
+		MediaDuration:      mediaDuration,
+		MediaTitle:         mediaTitle,
+		MediaFilename:      mediaFilename,
+		MediaMimeType:      mediaMimeType,
+		MediaFileSize:      mediaFileSize,
+		Poll:               poll,
 		Entities:           message.Entities,
 		ThreadID:           message.MessageThreadID,
 		IsTopicMessage:     message.IsTopicMessage,

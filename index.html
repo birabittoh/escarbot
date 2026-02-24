@@ -1226,6 +1226,14 @@
             return str.length > len ? str.substring(0, len) + "..." : str;
         }
 
+        function formatFileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+
         async function fetchCache() {
             console.log('Fetching cache... Current selectedChatId:', window.selectedChatId);
             try {
@@ -1387,12 +1395,44 @@
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
                         </div>
                     </div>
-                    ${msg.media_url ? `
-                        <div class="cached-message-media">
-                            <img src="${msg.media_url}" alt="${msg.media_type}">
-                        </div>
-                    ` : ''}
-                <div class="cached-message-text">${escapeHTML(truncate(msg.text || msg.caption)) || (msg.media_url ? '' : '<media>')}</div>
+                    ${(() => {
+                        const t = msg.media_type;
+                        if (!t) return '';
+                        if (t === 'photo' || t === 'sticker') {
+                            return `<div class="cached-message-media"><img src="${msg.media_url}" alt="${t}"></div>`;
+                        }
+                        if (t === 'animation') {
+                            return `<div class="cached-message-media"><video autoplay loop muted playsinline src="${msg.media_url}" style="max-width:100%;max-height:300px;border-radius:8px;"></video></div>`;
+                        }
+                        if (t === 'video') {
+                            return `<div class="cached-message-media"><video controls src="${msg.media_url}" style="max-width:100%;max-height:300px;border-radius:8px;"></video></div>`;
+                        }
+                        if (t === 'video_note') {
+                            return `<div style="display:flex;justify-content:center;margin-bottom:6px;"><video controls src="${msg.media_url}" style="width:200px;height:200px;border-radius:50%;object-fit:cover;"></video></div>`;
+                        }
+                        if (t === 'voice' || t === 'audio') {
+                            const title = msg.media_title ? `<div style="font-size:0.8rem;color:#a78bfa;margin-bottom:4px;">🎵 ${escapeHTML(msg.media_title)}</div>` : '';
+                            const dur = msg.media_duration ? `<span style="font-size:0.7rem;color:#9ca3af;margin-left:6px;">${Math.floor(msg.media_duration/60)}:${String(msg.media_duration%60).padStart(2,'0')}</span>` : '';
+                            return `<div style="padding:8px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;" onclick="event.stopPropagation()">${title}<audio controls src="${msg.media_url}" style="width:100%;height:32px;"></audio>${dur}</div>`;
+                        }
+                        if (t === 'document') {
+                            const filename = escapeHTML(msg.media_filename || 'Document');
+                            const mime = escapeHTML(msg.media_mime_type || '');
+                            const size = msg.media_file_size ? formatFileSize(msg.media_file_size) : '';
+                            return `<div style="padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px;"><span style="font-size:1.5rem;">📎</span><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${filename}</div><div style="font-size:0.72rem;color:#9ca3af;">${mime}${size ? ' · ' + size : ''}</div></div><a href="${msg.media_url}" target="_blank" onclick="event.stopPropagation()" style="color:#a78bfa;text-decoration:none;font-size:0.8rem;flex-shrink:0;">↓</a></div>`;
+                        }
+                        if (t === 'poll' && msg.poll) {
+                            const p = msg.poll;
+                            const total = p.total_voter_count || 0;
+                            const opts = (p.options || []).map(opt => {
+                                const pct = total > 0 ? Math.round(opt.voter_count / total * 100) : 0;
+                                return `<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:3px;"><span>${escapeHTML(opt.text)}</span><span style="color:#a78bfa;">${pct}%</span></div><div style="background:rgba(255,255,255,0.1);border-radius:3px;height:4px;"><div style="background:#8b5cf6;border-radius:3px;height:100%;width:${pct}%;"></div></div></div>`;
+                            }).join('');
+                            return `<div style="padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;" onclick="event.stopPropagation()"><div style="font-weight:600;margin-bottom:8px;font-size:0.9rem;">📊 ${escapeHTML(p.question)}</div>${opts}<div style="font-size:0.7rem;color:#9ca3af;margin-top:6px;">${total} vote${total !== 1 ? 's' : ''}${p.is_closed ? ' · Closed' : ''}</div></div>`;
+                        }
+                        return '';
+                    })()}
+                <div class="cached-message-text">${escapeHTML(truncate(msg.text || msg.caption)) || (msg.media_url || msg.poll ? '' : '<media>')}</div>
 
                     ${msg.history && msg.history.length > 0 ? `
                         <div class="message-history" style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;" onclick="event.stopPropagation()">
