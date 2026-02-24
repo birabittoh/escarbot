@@ -618,10 +618,64 @@
             overflow: hidden;
         }
 
-        .cached-message-media img {
-            max-height: 200px;
+        .cached-message-media img, .cached-message-media video {
+            max-height: 300px;
             max-width: 100%;
             object-fit: contain;
+        }
+
+        .video-note {
+            border-radius: 50%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            max-width: 200px !important;
+        }
+
+        .cached-message-media audio {
+            width: 100%;
+        }
+
+        .document-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #d1d5db;
+        }
+
+        .cached-message-poll {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .poll-question {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #a78bfa;
+            font-size: 0.9rem;
+        }
+
+        .poll-option {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .poll-voters {
+            color: #9ca3af;
+            font-size: 0.75rem;
         }
 
         /* Toast Notification */
@@ -1384,12 +1438,53 @@
                             <span style="font-size:0.7rem;color:#9ca3af;">#${msg.message_id}</span>
                         </div>
                     </div>
-                    ${msg.media_url ? `
-                        <div class="cached-message-media">
-                            <img src="${msg.media_url}" alt="${msg.media_type}">
+
+                    ${(() => {
+                        if (!msg.media_url) return '';
+                        if (msg.media_type === 'photo' || msg.media_type === 'sticker') {
+                            return `<div class="cached-message-media"><img src="${msg.media_url}" alt="${msg.media_type}"></div>`;
+                        } else if (msg.media_type === 'animation' || msg.media_type === 'video' || msg.media_type === 'video_note') {
+                            const isVideoNote = msg.media_type === 'video_note';
+                            return `
+                                <div class="cached-message-media">
+                                    <video src="${msg.media_url}" autoplay loop muted playsinline controls ${isVideoNote ? 'class="video-note"' : ''}></video>
+                                </div>`;
+                        } else if (msg.media_type === 'voice' || msg.media_type === 'audio') {
+                            return `
+                                <div class="cached-message-media">
+                                    <audio src="${msg.media_url}" controls></audio>
+                                </div>`;
+                        } else if (msg.media_type === 'document') {
+                            return `
+                                <div class="document-info">
+                                    <span style="font-size: 1.5rem;">📄</span>
+                                    <div style="overflow: hidden;">
+                                        <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(msg.file_name || 'Document')}</div>
+                                        <a href="${msg.media_url}" target="_blank" style="color: #8b5cf6; font-size: 0.75rem; text-decoration: none;" onclick="event.stopPropagation()">Download</a>
+                                    </div>
+                                </div>`;
+                        }
+                        return '';
+                    })()}
+
+                    ${msg.poll ? `
+                        <div class="cached-message-poll">
+                            <div class="poll-question">📊 ${escapeHTML(msg.poll.question)}</div>
+                            <div class="poll-options">
+                                ${msg.poll.options.map(opt => `
+                                    <div class="poll-option">
+                                        <span>${escapeHTML(opt.text)}</span>
+                                        <span class="poll-voters">${opt.voter_count} voters</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; text-align: right;">
+                                Total: ${msg.poll.total_voter_count} voters • ${msg.poll.is_closed ? 'Closed' : 'Active'}
+                            </div>
                         </div>
                     ` : ''}
-                <div class="cached-message-text">${escapeHTML(truncate(msg.text || msg.caption)) || (msg.media_url ? '' : '<media>')}</div>
+
+                <div class="cached-message-text">${escapeHTML(truncate(msg.text || msg.caption)) || (msg.media_url || msg.poll ? '' : '<media>')}</div>
 
                     ${msg.history && msg.history.length > 0 ? `
                         <div class="message-history" style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;" onclick="event.stopPropagation()">

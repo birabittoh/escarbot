@@ -60,6 +60,20 @@ type ReactionDetail struct {
 	Emoji string `json:"emoji"`
 }
 
+// CachedPollOption represents an option in a poll
+type CachedPollOption struct {
+	Text       string `json:"text"`
+	VoterCount int    `json:"voter_count"`
+}
+
+// CachedPoll represents a poll stored in cache
+type CachedPoll struct {
+	Question        string             `json:"question"`
+	Options         []CachedPollOption `json:"options"`
+	TotalVoterCount int                `json:"total_voter_count"`
+	IsClosed        bool               `json:"is_closed"`
+}
+
 // ChatInfo represents information about a Telegram chat
 type ChatInfo struct {
 	ID       int64  `json:"id,string"`
@@ -79,6 +93,8 @@ type CachedMessage struct {
 	Caption            string                   `json:"caption,omitempty"`
 	MediaURL           string                   `json:"media_url,omitempty"`
 	MediaType          string                   `json:"media_type,omitempty"`
+	FileName           string                   `json:"file_name,omitempty"`
+	Poll               *CachedPoll              `json:"poll,omitempty"`
 	Entities           []tgbotapi.MessageEntity `json:"entities,omitempty"`
 	ThreadID           int                      `json:"thread_id,omitempty"`
 	IsTopicMessage     bool                     `json:"is_topic_message"`

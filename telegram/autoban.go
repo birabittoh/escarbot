@@ -298,7 +298,9 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		fromFirstName = message.SenderChat.Title
 	}
 
-	var mediaURL, mediaType string
+	var mediaURL, mediaType, fileName string
+	var poll *CachedPoll
+
 	if len(message.Photo) > 0 {
 		mediaType = "photo"
 		photo := message.Photo[len(message.Photo)-1]
@@ -306,6 +308,39 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	} else if message.Sticker != nil {
 		mediaType = "sticker"
 		mediaURL = "/api/media?file_id=" + message.Sticker.FileID
+	} else if message.Animation != nil {
+		mediaType = "animation"
+		mediaURL = "/api/media?file_id=" + message.Animation.FileID
+	} else if message.Video != nil {
+		mediaType = "video"
+		mediaURL = "/api/media?file_id=" + message.Video.FileID
+	} else if message.VideoNote != nil {
+		mediaType = "video_note"
+		mediaURL = "/api/media?file_id=" + message.VideoNote.FileID
+	} else if message.Voice != nil {
+		mediaType = "voice"
+		mediaURL = "/api/media?file_id=" + message.Voice.FileID
+	} else if message.Audio != nil {
+		mediaType = "audio"
+		mediaURL = "/api/media?file_id=" + message.Audio.FileID
+	} else if message.Document != nil {
+		mediaType = "document"
+		mediaURL = "/api/media?file_id=" + message.Document.FileID
+		fileName = message.Document.FileName
+	} else if message.Poll != nil {
+		options := make([]CachedPollOption, len(message.Poll.Options))
+		for i, opt := range message.Poll.Options {
+			options[i] = CachedPollOption{
+				Text:       opt.Text,
+				VoterCount: opt.VoterCount,
+			}
+		}
+		poll = &CachedPoll{
+			Question:        message.Poll.Question,
+			Options:         options,
+			TotalVoterCount: message.Poll.TotalVoterCount,
+			IsClosed:        message.Poll.IsClosed,
+		}
 	}
 
 	cached := CachedMessage{
@@ -319,6 +354,8 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 		Caption:            message.Caption,
 		MediaURL:           mediaURL,
 		MediaType:          mediaType,
+		FileName:           fileName,
+		Poll:               poll,
 		Entities:           message.Entities,
 		ThreadID:           message.MessageThreadID,
 		IsTopicMessage:     message.IsTopicMessage,
