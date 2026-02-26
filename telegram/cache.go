@@ -26,6 +26,7 @@ const (
 // pendingCaptchaRecord is the serialisable part of PendingCaptcha (no timer).
 type pendingCaptchaRecord struct {
 	UserID        int64  `json:"user_id"`
+	UserFirstName string `json:"user_first_name"`
 	ChatID        int64  `json:"chat_id"`
 	CorrectAnswer string `json:"correct_answer"`
 	CaptchaMsgID  int    `json:"captcha_msg_id"`
@@ -494,6 +495,7 @@ func (c *Cache) GetCaptcha(userID int64) (*PendingCaptcha, bool) {
 
 	return &PendingCaptcha{
 		UserID:          record.UserID,
+		UserFirstName:   record.UserFirstName,
 		ChatID:          record.ChatID,
 		CorrectAnswer:   record.CorrectAnswer,
 		CaptchaMsgID:    record.CaptchaMsgID,
@@ -508,6 +510,7 @@ func (c *Cache) GetCaptcha(userID int64) (*PendingCaptcha, bool) {
 func (c *Cache) SetCaptcha(userID int64, captcha *PendingCaptcha, ttl time.Duration) {
 	record := pendingCaptchaRecord{
 		UserID:        captcha.UserID,
+		UserFirstName: captcha.UserFirstName,
 		ChatID:        captcha.ChatID,
 		CorrectAnswer: captcha.CorrectAnswer,
 		CaptchaMsgID:  captcha.CaptchaMsgID,
