@@ -15,6 +15,7 @@ import (
 
 type PendingCaptcha struct {
 	UserID          int64
+	UserFirstName   string
 	ChatID          int64
 	CorrectAnswer   string
 	CaptchaMsgID    int
@@ -143,6 +144,7 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 
 	pending := &PendingCaptcha{
 		UserID:          user.ID,
+		UserFirstName:   user.FirstName,
 		ChatID:          chatID,
 		CorrectAnswer:   answerStr,
 		CaptchaMsgID:    msg.MessageID,
@@ -168,7 +170,7 @@ func handleCaptchaTimeout(escarbot *EscarBot, userID int64) {
 
 	log.Printf("User %d timed out on captcha", userID)
 
-	user := tgbotapi.User{ID: pending.UserID, FirstName: "User"}
+	user := tgbotapi.User{ID: pending.UserID, FirstName: pending.UserFirstName}
 	banAndCleanup(escarbot, pending.ChatID, user, pending.JoinMsgID, pending.CaptchaMsgID)
 }
 
