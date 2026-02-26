@@ -150,7 +150,8 @@ func SendCaptcha(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID
 		Attempts:        attempts,
 		ExpirationTimer: timer,
 	}
-	escarbot.Cache.SetCaptcha(user.ID, pending, time.Duration(timeout)*time.Second)
+	// Give the cache record a slightly longer TTL than the timer to avoid race conditions.
+	escarbot.Cache.SetCaptcha(user.ID, pending, time.Duration(timeout+30)*time.Second)
 	log.Printf("Captcha sent to user %d in chat %d, answer: %s", user.ID, chatID, answerStr)
 }
 

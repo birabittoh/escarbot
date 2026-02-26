@@ -45,6 +45,19 @@ func handleChatMemberUpdate(escarbot *EscarBot, update *tgbotapi.ChatMemberUpdat
 		log.Printf("User %d joined chat %d (detected via ChatMemberUpdated)", update.NewChatMember.User.ID, update.Chat.ID)
 		processJoin(escarbot, update.Chat.ID, *update.NewChatMember.User, 0)
 	}
+
+	isLeaving := newStatus == "left" || newStatus == "kicked" || newStatus == "banned"
+	if isLeaving && update.NewChatMember.User != nil {
+		userID := update.NewChatMember.User.ID
+		if pending, ok := escarbot.Cache.GetCaptcha(userID); ok {
+			if pending.ExpirationTimer != nil {
+				pending.ExpirationTimer.Stop()
+			}
+			deleteMessages(escarbot, update.Chat.ID, pending.CaptchaMsgID)
+			escarbot.Cache.DeleteCaptcha(userID)
+			log.Printf("User %d left the group, pending captcha deleted", userID)
+		}
+	}
 }
 
 // processJoin handles a user joining the group
@@ -381,9 +394,6 @@ func AddMessageToCache(escarbot *EscarBot, message *tgbotapi.Message) {
 	if !added {
 		return
 	}
-
-	log.Printf("Added message %d from chat %d (%s) to cache",
-		message.MessageID, message.Chat.ID, chatInfo.Title)
 
 	if escarbot.OnMessageCached != nil {
 		escarbot.OnMessageCached(cached)
