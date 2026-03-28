@@ -49,13 +49,13 @@ func handleChatMemberUpdate(escarbot *EscarBot, update *tgbotapi.ChatMemberUpdat
 	isLeaving := newStatus == "left" || newStatus == "kicked" || newStatus == "banned"
 	if isLeaving && update.NewChatMember.User != nil {
 		userID := update.NewChatMember.User.ID
-		if pending, ok := escarbot.Cache.GetCaptcha(userID); ok {
+		if pending, ok := escarbot.Cache.GetCaptcha(userID); ok && pending.ChatID == update.Chat.ID {
 			if pending.ExpirationTimer != nil {
 				pending.ExpirationTimer.Stop()
 			}
 			deleteMessages(escarbot, update.Chat.ID, pending.CaptchaMsgID)
 			escarbot.Cache.DeleteCaptcha(userID)
-			log.Printf("User %d left the group, pending captcha deleted", userID)
+			log.Printf("User %d left the group %d, pending captcha deleted", userID, update.Chat.ID)
 		}
 	}
 }
@@ -63,6 +63,14 @@ func handleChatMemberUpdate(escarbot *EscarBot, update *tgbotapi.ChatMemberUpdat
 // processJoin handles a user joining the group
 func processJoin(escarbot *EscarBot, chatID int64, user tgbotapi.User, joinMsgID int) {
 	if user.IsBot {
+		return
+	}
+
+	escarbot.StateMutex.RLock()
+	targetGroupID := escarbot.GroupID
+	escarbot.StateMutex.RUnlock()
+
+	if chatID != targetGroupID {
 		return
 	}
 
