@@ -57,6 +57,24 @@ func TestParseText(t *testing.T) {
 			url:  "https://bsky.app/profile/coldunwanted.net",
 			want: []string{"https://xbsky.app/profile/coldunwanted.net"},
 		},
+		{
+			name: "Instagram link",
+			text: "Instagram post: https://www.instagram.com/p/C-X-X-X-X-X/",
+			url:  "https://www.instagram.com/p/C-X-X-X-X-X/",
+			want: []string{"https://kksave.com/p/C-X-X-X-X-X"},
+		},
+		{
+			name: "TikTok link",
+			text: "TikTok video: https://www.tiktok.com/@user/video/7123456789012345678",
+			url:  "https://www.tiktok.com/@user/video/7123456789012345678",
+			want: []string{"https://www.kksave.com/@user/video/7123456789012345678"},
+		},
+		{
+			name: "TikTok short link",
+			text: "TikTok short: https://vm.tiktok.com/ZMeXXXXXX/",
+			url:  "https://vm.tiktok.com/ZMeXXXXXX/",
+			want: []string{"https://vm.kksave.com/ZMeXXXXXX/"},
+		},
 	}
 
 	for _, tt := range tests {
