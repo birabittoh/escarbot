@@ -39,17 +39,17 @@ var replacers = []Replacer{
 	{
 		Name:   "Instagram",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:www\.)?instagram\.com\/(?:reels?|p)\/([\w\-]{11})[\/\?\w=&]*`),
-		Format: "https://kkinstagram.com/p/%s",
+		Format: "https://kksave.com/p/%s",
 	},
 	{
 		Name:   "TikTok",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/@([\w.]+)\/(?:video)\/(\d{19,})`),
-		Format: "https://www.kktiktok.com/@%s/video/%s",
+		Format: "https://www.kksave.com/@%s/video/%s",
 	},
 	{
 		Name:   "TikTok Short",
 		Regex:  regexp.MustCompile(regexFlags + `https?:\/\/(?:(?:www)|(?:vm))?\.?tiktok\.com\/(?:t\/)?([\w]{9})\/?`),
-		Format: "https://vm.kktiktok.com/%s/",
+		Format: "https://vm.kksave.com/%s/",
 	},
 	{
 		Name:   "Reddit",
