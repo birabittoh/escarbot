@@ -143,6 +143,35 @@ func welcomeMessageHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	}
 }
 
+func statsHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bot.StateMutex.Lock()
+		defer bot.StateMutex.Unlock()
+		bot.StatsFeature = toggleBotProperty(r)
+		UpdateBoolEnvVar("STATS_FEATURE", bot.StatsFeature)
+	}
+}
+
+func statsConfigHandler(bot *telegram.EscarBot) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+
+		chatIDStr := r.Form.Get("statsChatId")
+		degreeStr := r.Form.Get("statsDegree")
+
+		bot.StateMutex.Lock()
+		if val, err := strconv.ParseInt(chatIDStr, 10, 64); err == nil {
+			bot.StatsChatID = val
+			UpdateEnvVar("STATS_CHAT_ID", chatIDStr)
+		}
+		if val, err := strconv.Atoi(degreeStr); err == nil {
+			bot.StatsPolynomialDegree = val
+			UpdateEnvVar("STATS_POLYNOMIAL_DEGREE", degreeStr)
+		}
+		bot.StateMutex.Unlock()
+	}
+}
+
 func welcomeContentHandler(bot *telegram.EscarBot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
@@ -406,6 +435,8 @@ func NewWebUI(port string, bot *telegram.EscarBot) WebUI {
 	r.HandleFunc("/setCaptchaConfig", captchaConfigHandler(bot))
 	r.HandleFunc("/setWelcomeMessage", welcomeMessageHandler(bot))
 	r.HandleFunc("/setWelcomeContent", welcomeContentHandler(bot))
+	r.HandleFunc("/setStats", statsHandler(bot))
+	r.HandleFunc("/setStatsConfig", statsConfigHandler(bot))
 	r.HandleFunc("/setChannel", channelHandler(bot))
 	r.HandleFunc("/setGroup", groupHandler(bot))
 	r.HandleFunc("/setAdmin", adminHandler(bot))

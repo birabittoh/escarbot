@@ -24,10 +24,13 @@ type EscarBot struct {
 	CaptchaTimeout    int
 	CaptchaMaxRetries int
 	WelcomeMessage    bool
+	StatsFeature      bool
 	ChannelID         int64
 	GroupID           int64
 	AdminID           int64
 	LogChannelID      int64
+	StatsChatID       int64
+	StatsPolynomialDegree int
 	BannedWords       []string
 	StateMutex        sync.RWMutex
 	MaxCacheSize      int
@@ -197,6 +200,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	adminForward := getBoolEnv("ADMIN_FORWARD", true)
 	autoBan := getBoolEnv("AUTO_BAN", true)
 	captcha := getBoolEnv("CAPTCHA", true)
+	statsFeature := getBoolEnv("STATS_FEATURE", false)
 
 	captchaTimeout := 120
 	if captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT"); captchaTimeoutStr != "" {
@@ -213,6 +217,20 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	}
 
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
+
+	statsChatID := int64(0)
+	if statsChatIDStr := os.Getenv("STATS_CHAT_ID"); statsChatIDStr != "" {
+		if val, err := strconv.ParseInt(statsChatIDStr, 10, 64); err == nil {
+			statsChatID = val
+		}
+	}
+
+	statsPolynomialDegree := 4
+	if statsDegreeStr := os.Getenv("STATS_POLYNOMIAL_DEGREE"); statsDegreeStr != "" {
+		if val, err := strconv.Atoi(statsDegreeStr); err == nil {
+			statsPolynomialDegree = val
+		}
+	}
 
 	chatBlacklistEnv := os.Getenv("CHAT_BLACKLIST")
 	var chatBlacklist []int64
@@ -243,13 +261,16 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		AutoBan:           autoBan,
 		Captcha:           captcha,
 		CaptchaTimeout:    captchaTimeout,
-		CaptchaMaxRetries: captchaMaxRetries,
-		WelcomeMessage:    welcomeMessage,
-		ChannelID:         channelIdInt,
-		GroupID:           groupIdInt,
-		AdminID:           adminIdInt,
-		LogChannelID:      logChannelIdInt,
-		BannedWords:       bannedWords,
+		CaptchaMaxRetries:     captchaMaxRetries,
+		WelcomeMessage:        welcomeMessage,
+		StatsFeature:          statsFeature,
+		ChannelID:             channelIdInt,
+		GroupID:               groupIdInt,
+		AdminID:               adminIdInt,
+		LogChannelID:          logChannelIdInt,
+		StatsChatID:           statsChatID,
+		StatsPolynomialDegree: statsPolynomialDegree,
+		BannedWords:           bannedWords,
 		MaxCacheSize:      maxCacheSize,
 		WelcomeText:       os.Getenv("WELCOME_TEXT"),
 		WelcomeLinks:      os.Getenv("WELCOME_LINKS"),
@@ -297,6 +318,7 @@ func BotPoll(escarbot *EscarBot) {
 		if msg != nil {
 			AddMessageToCache(escarbot, msg)
 			handleNewChatMembers(escarbot, msg)
+			HandleStatsMessage(escarbot, msg)
 			if linkDetection {
 				handleLinks(escarbot, msg)
 			}
