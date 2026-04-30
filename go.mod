@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/OvyFlash/telegram-bot-api v0.0.0-20260417154322-26e93143c22a
 	github.com/birabittoh/captcha v1.0.1
+	github.com/go-text/typesetting v0.3.4
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.18.0

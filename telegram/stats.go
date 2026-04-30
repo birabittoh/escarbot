@@ -9,7 +9,6 @@ import (
 	_ "image/png"
 	"log"
 	"math"
-	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -18,30 +17,65 @@ import (
 	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
+	"github.com/go-text/typesetting/font"
+	"github.com/go-text/typesetting/font/opentype/tables"
 	"github.com/rivo/uniseg"
-	"golang.org/x/image/font/opentype"
+	ot "golang.org/x/image/font/opentype"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
 	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/font"
+	plotfont "gonum.org/v1/plot/font"
 	"gonum.org/v1/plot/font/liberation"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/text"
 	"gonum.org/v1/plot/vg"
 	vgdraw "gonum.org/v1/plot/vg/draw"
+
+	// Alias the typesetting opentype loader package
+	tsot "github.com/go-text/typesetting/font/opentype"
 )
+
+//go:embed NotoColorEmoji.ttf
+var notoColorEmojiData []byte
 
 //go:embed DejaVuSans.ttf
 var dejaVuSansData []byte
 
 var (
-	emojiCache     = make(map[string]image.Image)
-	emojiCacheMu   sync.RWMutex
-	emojiTransport = &http.Client{Timeout: 5 * time.Second}
+	emojiCache   = make(map[string]image.Image)
+	emojiCacheMu sync.RWMutex
+	emojiFont    *font.Font
+	emojiFace    *font.Face
+	emojiInit    sync.Once
 )
 
+type resource struct {
+	*bytes.Reader
+}
+
+func (r resource) ReadAt(p []byte, off int64) (n int, err error) {
+	return r.Reader.ReadAt(p, off)
+}
+
+func initEmojiFont() {
+	emojiInit.Do(func() {
+		rs := resource{Reader: bytes.NewReader(notoColorEmojiData)}
+		ld, err := tsot.NewLoader(rs)
+		if err != nil {
+			log.Printf("Warning: failed to create emoji loader: %v", err)
+			return
+		}
+		emojiFont, err = font.NewFont(ld)
+		if err != nil {
+			log.Printf("Warning: failed to create emoji font: %v", err)
+			return
+		}
+		emojiFace = font.NewFace(emojiFont)
+	})
+}
+
 type FallbackHandler struct {
-	fonts *font.Cache
+	fonts *plotfont.Cache
 }
 
 type dateTicker struct{}
@@ -51,29 +85,32 @@ func (dateTicker) Ticks(min, max float64) []plot.Tick {
 		return nil
 	}
 
-	const labelWidth = 80.0 // Approximate width of "2006-01-02" in points
-	plotWidth := 12.0 * 72.0 // Plot width is 12 inches
-	maxTicks := int(plotWidth / (labelWidth * 1.5))
+	const labelWidth = 80.0
+	plotWidth := 12.0 * 72.0
+	// Aim for around 8-10 labels on a 12-inch plot
+	maxTicks := int(plotWidth / (labelWidth * 1.2))
 	if maxTicks < 2 {
 		maxTicks = 2
 	}
 
 	duration := time.Duration(int64(max-min)) * time.Second
-	step := duration / time.Duration(maxTicks)
+	approxStep := duration / time.Duration(maxTicks)
 
-	// Round step to something sensible
+	var step time.Duration
 	switch {
-	case step > 365*24*time.Hour:
+	case approxStep > 365*24*time.Hour:
 		step = 365 * 24 * time.Hour
-	case step > 90*24*time.Hour:
+	case approxStep > 180*24*time.Hour:
+		step = 180 * 24 * time.Hour
+	case approxStep > 90*24*time.Hour:
 		step = 90 * 24 * time.Hour
-	case step > 30*24*time.Hour:
+	case approxStep > 30*24*time.Hour:
 		step = 30 * 24 * time.Hour
-	case step > 14*24*time.Hour:
+	case approxStep > 14*24*time.Hour:
 		step = 14 * 24 * time.Hour
-	case step > 7*24*time.Hour:
+	case approxStep > 7*24*time.Hour:
 		step = 7 * 24 * time.Hour
-	case step > 24*time.Hour:
+	case approxStep > 24*time.Hour:
 		step = 24 * time.Hour
 	default:
 		step = 24 * time.Hour
@@ -92,7 +129,6 @@ func (dateTicker) Ticks(min, max float64) []plot.Tick {
 		})
 	}
 
-	// Add minor ticks (unsatisfied labels)
 	minorStep := step / 4
 	if minorStep >= 24*time.Hour {
 		for t := start.Add(-step); t.Unix() <= int64(max)+int64(step.Seconds()); t = t.Add(minorStep) {
@@ -116,21 +152,19 @@ func (dateTicker) Ticks(min, max float64) []plot.Tick {
 	return ticks
 }
 
-func (h FallbackHandler) Cache() *font.Cache { return h.fonts }
+func (h FallbackHandler) Cache() *plotfont.Cache { return h.fonts }
 func (h FallbackHandler) Lines(s string) []string { return strings.Split(s, "\n") }
-func (h FallbackHandler) Extents(fnt font.Font) font.Extents {
+func (h FallbackHandler) Extents(fnt plotfont.Font) plotfont.Extents {
 	face := h.fonts.Lookup(fnt, fnt.Size)
 	return face.Extents()
 }
 
-func (h FallbackHandler) findFace(r rune, preferred font.Font) font.Face {
-	// Try preferred font first
+func (h FallbackHandler) findFace(r rune, preferred plotfont.Font) plotfont.Face {
 	face := h.fonts.Lookup(preferred, preferred.Size)
 	if hasGlyph(face.Face, r) {
 		return face
 	}
 
-	// If preferred was Liberation, try DejaVu Sans first
 	if strings.HasPrefix(string(preferred.Typeface), "Liberation") {
 		fnt := preferred
 		fnt.Typeface = "DejaVu Sans"
@@ -141,7 +175,6 @@ func (h FallbackHandler) findFace(r rune, preferred font.Font) font.Face {
 		}
 	}
 
-	// Try DejaVu Sans as a general fallback
 	if preferred.Typeface != "DejaVu Sans" {
 		fnt := preferred
 		fnt.Typeface = "DejaVu Sans"
@@ -160,14 +193,13 @@ func isEmoji(s string) bool {
 		return false
 	}
 	r := []rune(s)[0]
-	// Basic check for emoji range
 	return (r >= 0x1F000 && r <= 0x1FFFF) ||
 		(r >= 0x2600 && r <= 0x27BF) ||
 		(r >= 0x2300 && r <= 0x23FF) ||
 		(r >= 0x2B00 && r <= 0x2BFF)
 }
 
-func hasGlyph(f *opentype.Font, r rune) bool {
+func hasGlyph(f *ot.Font, r rune) bool {
 	if f == nil {
 		return false
 	}
@@ -175,44 +207,64 @@ func hasGlyph(f *opentype.Font, r rune) bool {
 	return idx != 0
 }
 
-func getEmojiImage(emoji string) image.Image {
+func getEmojiImage(cluster string, size vg.Length) image.Image {
+	initEmojiFont()
+	if emojiFont == nil {
+		return nil
+	}
+
 	emojiCacheMu.RLock()
-	img, ok := emojiCache[emoji]
+	img, ok := emojiCache[cluster]
 	emojiCacheMu.RUnlock()
 	if ok {
 		return img
 	}
 
-	// Convert emoji to hex string for Twemoji URL
-	var hexParts []string
-	for _, r := range emoji {
-		hexParts = append(hexParts, fmt.Sprintf("%x", r))
-	}
-	hexStr := strings.Join(hexParts, "-")
-	url := fmt.Sprintf("https://abs.twimg.com/emoji/v2/72x72/%s.png", hexStr)
-
-	resp, err := emojiTransport.Get(url)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
+	runes := []rune(cluster)
+	if len(runes) == 0 {
 		return nil
 	}
 
-	img, _, err = image.Decode(resp.Body)
-	if err != nil {
+	gid, ok := emojiFont.NominalGlyph(runes[0])
+	if !ok {
 		return nil
 	}
 
 	emojiCacheMu.Lock()
-	emojiCache[emoji] = img
-	emojiCacheMu.Unlock()
+	defer emojiCacheMu.Unlock()
+
+	// Double check
+	if img, ok = emojiCache[cluster]; ok {
+		return img
+	}
+
+	ppem := uint16(size.Dots(72))
+	if ppem == 0 {
+		ppem = 64
+	}
+
+	emojiFace.SetPpem(ppem, ppem)
+	bitmap, ok := emojiFace.GlyphDataBitmap(tables.GlyphID(gid))
+	if !ok {
+		sizes := emojiFont.BitmapSizes()
+		if len(sizes) > 0 {
+			best := sizes[0]
+			emojiFace.SetPpem(best.XPpem, best.YPpem)
+			bitmap, ok = emojiFace.GlyphDataBitmap(tables.GlyphID(gid))
+		}
+	}
+
+	if ok && bitmap.Format == 2 { // PNG
+		img, _, _ = image.Decode(bytes.NewReader(bitmap.Data))
+		if img != nil {
+			emojiCache[cluster] = img
+		}
+	}
+
 	return img
 }
 
-func (h FallbackHandler) Box(txt string, fnt font.Font) (vg.Length, vg.Length, vg.Length) {
+func (h FallbackHandler) Box(txt string, fnt plotfont.Font) (vg.Length, vg.Length, vg.Length) {
 	lines := h.Lines(txt)
 	var maxW vg.Length
 	var hgt, depth vg.Length
@@ -224,7 +276,6 @@ func (h FallbackHandler) Box(txt string, fnt font.Font) (vg.Length, vg.Length, v
 		for gr.Next() {
 			cluster := gr.Str()
 			if isEmoji(cluster) {
-				// Emojis are treated as square based on font size
 				w += fnt.Size
 				if fnt.Size > hgt {
 					hgt = fnt.Size
@@ -294,7 +345,7 @@ func (h FallbackHandler) Draw(c vg.Canvas, txt string, sty text.Style, pt vg.Poi
 		for gr.Next() {
 			cluster := gr.Str()
 			if isEmoji(cluster) {
-				img := getEmojiImage(cluster)
+				img := getEmojiImage(cluster, sty.Font.Size)
 				if img != nil {
 					rect := vg.Rectangle{
 						Min: vg.Point{X: lpt.X, Y: lpt.Y},
@@ -304,7 +355,7 @@ func (h FallbackHandler) Draw(c vg.Canvas, txt string, sty text.Style, pt vg.Poi
 				}
 				lpt.X += sty.Font.Size
 			} else {
-				var currentFace font.Face
+				var currentFace plotfont.Face
 				var currentStart int
 				var currentWidth vg.Length
 				runes := []rune(cluster)
@@ -332,11 +383,11 @@ func (h FallbackHandler) Draw(c vg.Canvas, txt string, sty text.Style, pt vg.Poi
 }
 
 func init() {
-	var coll font.Collection
+	var coll plotfont.Collection
 
-	if face, err := opentype.Parse(dejaVuSansData); err == nil {
-		coll = append(coll, font.Face{
-			Font: font.Font{Typeface: "DejaVu Sans"},
+	if face, err := ot.Parse(dejaVuSansData); err == nil {
+		coll = append(coll, plotfont.Face{
+			Font: plotfont.Font{Typeface: "DejaVu Sans"},
 			Face: face,
 		})
 	} else {
@@ -345,7 +396,7 @@ func init() {
 
 	coll = append(coll, liberation.Collection()...)
 
-	cache := font.NewCache(coll)
+	cache := plotfont.NewCache(coll)
 	plot.DefaultTextHandler = FallbackHandler{fonts: cache}
 	plot.DefaultFont.Typeface = "DejaVu Sans"
 	plot.DefaultFont.Variant = ""
