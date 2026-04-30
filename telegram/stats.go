@@ -31,9 +31,6 @@ import (
 	vgdraw "gonum.org/v1/plot/vg/draw"
 )
 
-//go:embed NotoColorEmoji.ttf
-var notoColorEmojiData []byte
-
 //go:embed DejaVuSans.ttf
 var dejaVuSansData []byte
 
@@ -45,6 +42,78 @@ var (
 
 type FallbackHandler struct {
 	fonts *font.Cache
+}
+
+type dateTicker struct{}
+
+func (dateTicker) Ticks(min, max float64) []plot.Tick {
+	if max <= min {
+		return nil
+	}
+
+	const labelWidth = 80.0 // Approximate width of "2006-01-02" in points
+	plotWidth := 12.0 * 72.0 // Plot width is 12 inches
+	maxTicks := int(plotWidth / (labelWidth * 1.5))
+	if maxTicks < 2 {
+		maxTicks = 2
+	}
+
+	duration := time.Duration(int64(max-min)) * time.Second
+	step := duration / time.Duration(maxTicks)
+
+	// Round step to something sensible
+	switch {
+	case step > 365*24*time.Hour:
+		step = 365 * 24 * time.Hour
+	case step > 90*24*time.Hour:
+		step = 90 * 24 * time.Hour
+	case step > 30*24*time.Hour:
+		step = 30 * 24 * time.Hour
+	case step > 14*24*time.Hour:
+		step = 14 * 24 * time.Hour
+	case step > 7*24*time.Hour:
+		step = 7 * 24 * time.Hour
+	case step > 24*time.Hour:
+		step = 24 * time.Hour
+	default:
+		step = 24 * time.Hour
+	}
+
+	var ticks []plot.Tick
+	start := time.Unix(int64(min), 0).Truncate(step)
+	if start.Unix() < int64(min) {
+		start = start.Add(step)
+	}
+
+	for t := start; t.Unix() <= int64(max); t = t.Add(step) {
+		ticks = append(ticks, plot.Tick{
+			Value: float64(t.Unix()),
+			Label: t.Format("2006-01-02"),
+		})
+	}
+
+	// Add minor ticks (unsatisfied labels)
+	minorStep := step / 4
+	if minorStep >= 24*time.Hour {
+		for t := start.Add(-step); t.Unix() <= int64(max)+int64(step.Seconds()); t = t.Add(minorStep) {
+			val := float64(t.Unix())
+			if val < min || val > max {
+				continue
+			}
+			isMajor := false
+			for _, maj := range ticks {
+				if math.Abs(maj.Value-val) < 1.0 {
+					isMajor = true
+					break
+				}
+			}
+			if !isMajor {
+				ticks = append(ticks, plot.Tick{Value: val})
+			}
+		}
+	}
+
+	return ticks
 }
 
 func (h FallbackHandler) Cache() *font.Cache { return h.fonts }
@@ -379,7 +448,10 @@ func createLinearPlot(rows []StatsRow, showNotes bool) ([]byte, error) {
 	line.Color = color.RGBA{R: 0, G: 0, B: 255, A: 255}
 	p.Add(line, points)
 
-	p.X.Tick.Marker = plot.TimeTicks{Format: "2006-01-02"}
+	p.X.Tick.Marker = plot.TimeTicks{
+		Ticker: dateTicker{},
+		Format: "2006-01-02",
+	}
 
 	// Annotations
 	if showNotes {
@@ -449,7 +521,10 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
 
-	p.X.Tick.Marker = plot.TimeTicks{Format: "2006-01-02"}
+	p.X.Tick.Marker = plot.TimeTicks{
+		Ticker: dateTicker{},
+		Format: "2006-01-02",
+	}
 
 	// Real data
 	realLine, realPoints, _ := plotter.NewLinePoints(pts)
