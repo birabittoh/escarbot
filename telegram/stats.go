@@ -4,16 +4,21 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"image"
 	"image/color"
+	_ "image/png"
 	"log"
 	"math"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
+	"github.com/rivo/uniseg"
 	"golang.org/x/image/font/opentype"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
@@ -23,7 +28,7 @@ import (
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/text"
 	"gonum.org/v1/plot/vg"
-	"gonum.org/v1/plot/vg/draw"
+	vgdraw "gonum.org/v1/plot/vg/draw"
 )
 
 //go:embed NotoColorEmoji.ttf
@@ -32,32 +37,248 @@ var notoColorEmojiData []byte
 //go:embed DejaVuSans.ttf
 var dejaVuSansData []byte
 
+var (
+	emojiCache     = make(map[string]image.Image)
+	emojiCacheMu   sync.RWMutex
+	emojiTransport = &http.Client{Timeout: 5 * time.Second}
+)
+
+type FallbackHandler struct {
+	fonts *font.Cache
+}
+
+func (h FallbackHandler) Cache() *font.Cache { return h.fonts }
+func (h FallbackHandler) Lines(s string) []string { return strings.Split(s, "\n") }
+func (h FallbackHandler) Extents(fnt font.Font) font.Extents {
+	face := h.fonts.Lookup(fnt, fnt.Size)
+	return face.Extents()
+}
+
+func (h FallbackHandler) findFace(r rune, preferred font.Font) font.Face {
+	// Try preferred font first
+	face := h.fonts.Lookup(preferred, preferred.Size)
+	if hasGlyph(face.Face, r) {
+		return face
+	}
+
+	// If preferred was Liberation, try DejaVu Sans first
+	if strings.HasPrefix(string(preferred.Typeface), "Liberation") {
+		fnt := preferred
+		fnt.Typeface = "DejaVu Sans"
+		fnt.Variant = ""
+		f := h.fonts.Lookup(fnt, fnt.Size)
+		if hasGlyph(f.Face, r) {
+			return f
+		}
+	}
+
+	// Try DejaVu Sans as a general fallback
+	if preferred.Typeface != "DejaVu Sans" {
+		fnt := preferred
+		fnt.Typeface = "DejaVu Sans"
+		fnt.Variant = ""
+		f := h.fonts.Lookup(fnt, fnt.Size)
+		if hasGlyph(f.Face, r) {
+			return f
+		}
+	}
+
+	return face
+}
+
+func isEmoji(s string) bool {
+	if s == "" {
+		return false
+	}
+	r := []rune(s)[0]
+	// Basic check for emoji range
+	return (r >= 0x1F000 && r <= 0x1FFFF) ||
+		(r >= 0x2600 && r <= 0x27BF) ||
+		(r >= 0x2300 && r <= 0x23FF) ||
+		(r >= 0x2B00 && r <= 0x2BFF)
+}
+
+func hasGlyph(f *opentype.Font, r rune) bool {
+	if f == nil {
+		return false
+	}
+	idx, _ := f.GlyphIndex(nil, r)
+	return idx != 0
+}
+
+func getEmojiImage(emoji string) image.Image {
+	emojiCacheMu.RLock()
+	img, ok := emojiCache[emoji]
+	emojiCacheMu.RUnlock()
+	if ok {
+		return img
+	}
+
+	// Convert emoji to hex string for Twemoji URL
+	var hexParts []string
+	for _, r := range emoji {
+		hexParts = append(hexParts, fmt.Sprintf("%x", r))
+	}
+	hexStr := strings.Join(hexParts, "-")
+	url := fmt.Sprintf("https://abs.twimg.com/emoji/v2/72x72/%s.png", hexStr)
+
+	resp, err := emojiTransport.Get(url)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	img, _, err = image.Decode(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	emojiCacheMu.Lock()
+	emojiCache[emoji] = img
+	emojiCacheMu.Unlock()
+	return img
+}
+
+func (h FallbackHandler) Box(txt string, fnt font.Font) (vg.Length, vg.Length, vg.Length) {
+	lines := h.Lines(txt)
+	var maxW vg.Length
+	var hgt, depth vg.Length
+	extPrimary := h.Extents(fnt)
+
+	for i, line := range lines {
+		var w vg.Length
+		gr := uniseg.NewGraphemes(line)
+		for gr.Next() {
+			cluster := gr.Str()
+			if isEmoji(cluster) {
+				// Emojis are treated as square based on font size
+				w += fnt.Size
+				if fnt.Size > hgt {
+					hgt = fnt.Size
+				}
+			} else {
+				for _, r := range cluster {
+					face := h.findFace(r, fnt)
+					w += face.Width(string(r))
+					ext := face.Extents()
+					if ext.Ascent > hgt {
+						hgt = ext.Ascent
+					}
+					if ext.Descent > depth {
+						depth = ext.Descent
+					}
+				}
+			}
+		}
+		if w > maxW {
+			maxW = w
+		}
+		if i > 0 {
+			hgt += extPrimary.Height
+		}
+	}
+	return maxW, hgt, depth
+}
+
+func (h FallbackHandler) Draw(c vg.Canvas, txt string, sty text.Style, pt vg.Point) {
+	lines := h.Lines(txt)
+	if len(lines) == 0 {
+		return
+	}
+
+	c.Push()
+	defer c.Pop()
+	if sty.Rotation != 0 {
+		c.Translate(pt)
+		c.Rotate(sty.Rotation)
+		pt = vg.Point{}
+	}
+
+	_, hgt, d := h.Box(txt, sty.Font)
+	extPrimary := h.Extents(sty.Font)
+	c.SetColor(sty.Color)
+
+	totalHeight := vg.Length(len(lines)-1)*extPrimary.Height + hgt + d
+
+	var yOffset vg.Length
+	switch sty.YAlign {
+	case vgdraw.YTop:
+		yOffset = -hgt
+	case vgdraw.YCenter:
+		yOffset = totalHeight/2 - hgt
+	case vgdraw.YBottom:
+		yOffset = d
+	}
+
+	for i, line := range lines {
+		lpt := pt
+		lpt.Y = pt.Y + yOffset - vg.Length(i)*extPrimary.Height
+
+		lw, _, _ := h.Box(line, sty.Font)
+		lpt.X = pt.X + vg.Length(sty.XAlign)*lw
+
+		gr := uniseg.NewGraphemes(line)
+		for gr.Next() {
+			cluster := gr.Str()
+			if isEmoji(cluster) {
+				img := getEmojiImage(cluster)
+				if img != nil {
+					rect := vg.Rectangle{
+						Min: vg.Point{X: lpt.X, Y: lpt.Y},
+						Max: vg.Point{X: lpt.X + sty.Font.Size, Y: lpt.Y + sty.Font.Size},
+					}
+					c.DrawImage(rect, img)
+				}
+				lpt.X += sty.Font.Size
+			} else {
+				var currentFace font.Face
+				var currentStart int
+				var currentWidth vg.Length
+				runes := []rune(cluster)
+				for j, r := range runes {
+					face := h.findFace(r, sty.Font)
+					if j == 0 {
+						currentFace = face
+						currentStart = 0
+					} else if face.Name() != currentFace.Name() {
+						c.FillString(currentFace, lpt, string(runes[currentStart:j]))
+						lpt.X += currentWidth
+						currentFace = face
+						currentStart = j
+						currentWidth = 0
+					}
+					currentWidth += face.Width(string(r))
+				}
+				if len(runes) > 0 {
+					c.FillString(currentFace, lpt, string(runes[currentStart:]))
+					lpt.X += currentWidth
+				}
+			}
+		}
+	}
+}
+
 func init() {
 	var coll font.Collection
 
 	if face, err := opentype.Parse(dejaVuSansData); err == nil {
 		coll = append(coll, font.Face{
-			Font: font.Font{Typeface: "DejaVuSans"},
+			Font: font.Font{Typeface: "DejaVu Sans"},
 			Face: face,
 		})
 	} else {
 		log.Printf("Warning: failed to parse embedded DejaVuSans font: %v", err)
 	}
 
-	if face, err := opentype.Parse(notoColorEmojiData); err == nil {
-		coll = append(coll, font.Face{
-			Font: font.Font{Typeface: "NotoColorEmoji"},
-			Face: face,
-		})
-	} else {
-		log.Printf("Warning: failed to parse embedded NotoColorEmoji font: %v", err)
-	}
-
 	coll = append(coll, liberation.Collection()...)
 
 	cache := font.NewCache(coll)
-	plot.DefaultTextHandler = text.Plain{Fonts: cache}
-	plot.DefaultFont.Typeface = "DejaVuSans"
+	plot.DefaultTextHandler = FallbackHandler{fonts: cache}
+	plot.DefaultFont.Typeface = "DejaVu Sans"
 	plot.DefaultFont.Variant = ""
 	plotter.DefaultFont = plot.DefaultFont
 }
@@ -170,7 +391,7 @@ func createLinearPlot(rows []StatsRow, showNotes bool) ([]byte, error) {
 				})
 				if err == nil {
 					labels.Offset = vg.Point{X: 0, Y: -20}
-					labels.TextStyle[0].XAlign = draw.XCenter
+					labels.TextStyle[0].XAlign = vgdraw.XCenter
 					labels.TextStyle[0].Handler = plot.DefaultTextHandler
 					p.Add(labels)
 				}
