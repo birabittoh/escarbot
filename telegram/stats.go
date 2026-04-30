@@ -2,11 +2,11 @@ package telegram
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"image/color"
 	"log"
 	"math"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -26,28 +26,25 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 )
 
+//go:embed DejaVuSans.ttf
+var dejavuSansData []byte
+
 var emojiHandler text.Handler
 
 func init() {
 	// Start with default liberation fonts
 	coll := liberation.Collection()
 
-	// Try to load a font with emoji support
-	fontPath := "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-	fontData, err := os.ReadFile(fontPath)
+	// Parse embedded font
+	face, err := opentype.Parse(dejavuSansData)
 	if err == nil {
-		face, err := opentype.Parse(fontData)
-		if err == nil {
-			coll = append(coll, font.Face{
-				Font: font.Font{Typeface: "DejaVuSans"},
-				Face: face,
-			})
-			// Also add it as default by putting it at the beginning
-			coll = append([]font.Face{{
-				Font: font.Font{Typeface: "DejaVuSans"},
-				Face: face,
-			}}, liberation.Collection()...)
-		}
+		// Add it as default by putting it at the beginning
+		coll = append([]font.Face{{
+			Font: font.Font{Typeface: "DejaVuSans"},
+			Face: face,
+		}}, coll...)
+	} else {
+		log.Printf("Warning: failed to parse embedded DejaVuSans font: %v", err)
 	}
 
 	cache := font.NewCache(coll)
@@ -351,7 +348,7 @@ func HandleStatsMessage(bot *EscarBot, msg *tgbotapi.Message) {
 		mediaGroup.MessageThreadID = msg.MessageThreadID
 	}
 
-	_, err = bot.Bot.Send(mediaGroup)
+	_, err = bot.Bot.Request(mediaGroup)
 	if err != nil {
 		log.Printf("Error sending stats plots: %v", err)
 	}
