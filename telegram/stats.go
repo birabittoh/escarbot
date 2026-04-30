@@ -33,28 +33,33 @@ var notoColorEmojiData []byte
 var dejaVuSansData []byte
 
 func init() {
-	coll := liberation.Collection()
+	var coll font.Collection
 
 	if face, err := opentype.Parse(dejaVuSansData); err == nil {
-		coll = append([]font.Face{{
+		coll = append(coll, font.Face{
 			Font: font.Font{Typeface: "DejaVuSans"},
 			Face: face,
-		}}, coll...)
+		})
 	} else {
 		log.Printf("Warning: failed to parse embedded DejaVuSans font: %v", err)
 	}
 
 	if face, err := opentype.Parse(notoColorEmojiData); err == nil {
-		coll = append([]font.Face{{
+		coll = append(coll, font.Face{
 			Font: font.Font{Typeface: "NotoColorEmoji"},
 			Face: face,
-		}}, coll...)
+		})
 	} else {
 		log.Printf("Warning: failed to parse embedded NotoColorEmoji font: %v", err)
 	}
 
+	coll = append(coll, liberation.Collection()...)
+
 	cache := font.NewCache(coll)
 	plot.DefaultTextHandler = text.Plain{Fonts: cache}
+	plot.DefaultFont.Typeface = "DejaVuSans"
+	plot.DefaultFont.Variant = ""
+	plotter.DefaultFont = plot.DefaultFont
 }
 
 type StatsRow struct {
