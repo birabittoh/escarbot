@@ -158,8 +158,11 @@ func statsConfigHandler(bot *telegram.EscarBot) http.HandlerFunc {
 
 		chatIDStr := r.Form.Get("statsChatId")
 		degreeStr := r.Form.Get("statsDegree")
+		showNotes := r.Form.Get("showNotes") == "on"
 
 		bot.StateMutex.Lock()
+		bot.StatsShowNotes = showNotes
+		UpdateBoolEnvVar("STATS_SHOW_NOTES", showNotes)
 		if val, err := strconv.ParseInt(chatIDStr, 10, 64); err == nil {
 			bot.StatsChatID = val
 			UpdateEnvVar("STATS_CHAT_ID", chatIDStr)

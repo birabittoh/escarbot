@@ -60,7 +60,7 @@ func TestPlots(t *testing.T) {
 		{time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC), 5300, "Mario's"},
 	}
 
-	_, err := createLinearPlot(rows)
+	_, err := createLinearPlot(rows, true)
 	if err != nil {
 		t.Errorf("Failed to create linear plot: %v", err)
 	}

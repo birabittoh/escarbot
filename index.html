@@ -745,7 +745,7 @@
 
                 <div class="feature-item" id="feature-stats" onclick="showSettings('stats')">
                     <div class="feature-info">
-                        <span class="feature-name">Stats Module</span>
+                        <span class="feature-name">Stats</span>
                     </div>
                     <div class="feature-actions" onclick="event.stopPropagation()">
                         <label class="switch">
@@ -873,7 +873,7 @@
 
                 <!-- Stats Settings -->
                 <div class="settings-panel" id="settings-stats">
-                    <div class="card-title">Stats module settings</div>
+                    <div class="card-title">Stats settings</div>
                     <form onsubmit="updateStatsConfig(event)">
                         <div class="input-group">
                             <label class="input-label" for="statsChatId">Target Chat ID</label>
@@ -882,6 +882,15 @@
                         <div class="input-group">
                             <label class="input-label" for="statsDegree">Polynomial Degree</label>
                             <input type="text" id="statsDegree" name="statsDegree" value="{{ .StatsPolynomialDegree }}" placeholder="4" required>
+                        </div>
+                        <div class="input-group">
+                            <div class="replacer-item">
+                                <span style="font-size: 0.9rem;">Show notes in plots</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="statsShowNotes" name="showNotes" {{ if .StatsShowNotes }} checked{{ end }}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
                         </div>
                         <div class="button-group">
                             <button type="submit">Save</button>
@@ -1057,9 +1066,11 @@
             event.preventDefault();
             const statsChatId = document.getElementById('statsChatId').value;
             const statsDegree = document.getElementById('statsDegree').value;
+            const showNotes = document.getElementById('statsShowNotes').checked ? 'on' : 'off';
             const params = new URLSearchParams();
             params.append('statsChatId', statsChatId);
             params.append('statsDegree', statsDegree);
+            params.append('showNotes', showNotes);
 
             const btn = event.target.querySelector('button');
             const originalText = btn.textContent;

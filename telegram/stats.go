@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -13,13 +14,45 @@ import (
 	"time"
 
 	tgbotapi "github.com/OvyFlash/telegram-bot-api"
+	"golang.org/x/image/font/opentype"
 	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/stat"
 	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/font"
+	"gonum.org/v1/plot/font/liberation"
 	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/text"
 	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 )
+
+var emojiHandler text.Handler
+
+func init() {
+	// Start with default liberation fonts
+	coll := liberation.Collection()
+
+	// Try to load a font with emoji support
+	fontPath := "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+	fontData, err := os.ReadFile(fontPath)
+	if err == nil {
+		face, err := opentype.Parse(fontData)
+		if err == nil {
+			coll = append(coll, font.Face{
+				Font: font.Font{Typeface: "DejaVuSans"},
+				Face: face,
+			})
+			// Also add it as default by putting it at the beginning
+			coll = append([]font.Face{{
+				Font: font.Font{Typeface: "DejaVuSans"},
+				Face: face,
+			}}, liberation.Collection()...)
+		}
+	}
+
+	cache := font.NewCache(coll)
+	emojiHandler = text.Plain{Fonts: cache}
+}
 
 type StatsRow struct {
 	Date        time.Time
@@ -97,12 +130,20 @@ func parseStatsMessage(text string) ([]StatsRow, error) {
 	return rows, nil
 }
 
-func createLinearPlot(rows []StatsRow) ([]byte, error) {
+func createLinearPlot(rows []StatsRow, showNotes bool) ([]byte, error) {
 	p := plot.New()
 	p.Title.Text = "Crescita Iscritti nel Tempo"
 	p.X.Label.Text = "Data"
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
+
+	if emojiHandler != nil {
+		p.Title.TextStyle.Handler = emojiHandler
+		p.X.Label.TextStyle.Handler = emojiHandler
+		p.Y.Label.TextStyle.Handler = emojiHandler
+		p.X.Tick.Label.Handler = emojiHandler
+		p.Y.Tick.Label.Handler = emojiHandler
+	}
 
 	pts := make(plotter.XYs, len(rows))
 	for i, row := range rows {
@@ -120,16 +161,21 @@ func createLinearPlot(rows []StatsRow) ([]byte, error) {
 	p.X.Tick.Marker = plot.TimeTicks{Format: "2006-01-02"}
 
 	// Annotations
-	for _, row := range rows {
-		if row.Note != "" {
-			labels, err := plotter.NewLabels(plotter.XYLabels{
-				XYs:    []plotter.XY{{X: float64(row.Date.Unix()), Y: row.Subscribers}},
-				Labels: []string{row.Note},
-			})
-			if err == nil {
-				labels.Offset = vg.Point{X: 0, Y: -20}
-				labels.TextStyle[0].XAlign = draw.XCenter
-				p.Add(labels)
+	if showNotes {
+		for _, row := range rows {
+			if row.Note != "" {
+				labels, err := plotter.NewLabels(plotter.XYLabels{
+					XYs:    []plotter.XY{{X: float64(row.Date.Unix()), Y: row.Subscribers}},
+					Labels: []string{row.Note},
+				})
+				if err == nil {
+					labels.Offset = vg.Point{X: 0, Y: -20}
+					labels.TextStyle[0].XAlign = draw.XCenter
+					if emojiHandler != nil {
+						labels.TextStyle[0].Handler = emojiHandler
+					}
+					p.Add(labels)
+				}
 			}
 		}
 	}
@@ -180,6 +226,15 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
 
+	if emojiHandler != nil {
+		p.Title.TextStyle.Handler = emojiHandler
+		p.X.Label.TextStyle.Handler = emojiHandler
+		p.Y.Label.TextStyle.Handler = emojiHandler
+		p.X.Tick.Label.Handler = emojiHandler
+		p.Y.Tick.Label.Handler = emojiHandler
+		p.Legend.TextStyle.Handler = emojiHandler
+	}
+
 	// Real data
 	realLine, realPoints, _ := plotter.NewLinePoints(pts)
 	realLine.Color = color.RGBA{R: 0, G: 0, B: 255, A: 255}
@@ -214,6 +269,11 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	p.Legend.Add("Previsione", futureLine)
 
 	p.Legend.Top = true
+	p.Legend.Left = true
+	p.Legend.Padding = vg.Points(10)
+	// Move legend further from the top/left edges to avoid axis labels
+	p.Legend.XOffs = vg.Points(40)
+	p.Legend.YOffs = -vg.Points(40)
 
 	wt, err := p.WriterTo(12*vg.Inch, 6*vg.Inch, "png")
 	if err != nil {
@@ -256,6 +316,7 @@ func polyEval(coeffs []float64, x float64) float64 {
 func HandleStatsMessage(bot *EscarBot, msg *tgbotapi.Message) {
 	bot.StateMutex.RLock()
 	enabled := bot.StatsFeature
+	showNotes := bot.StatsShowNotes
 	targetChatID := bot.StatsChatID
 	degree := bot.StatsPolynomialDegree
 	bot.StateMutex.RUnlock()
@@ -269,7 +330,7 @@ func HandleStatsMessage(bot *EscarBot, msg *tgbotapi.Message) {
 		return
 	}
 
-	plot1, err := createLinearPlot(rows)
+	plot1, err := createLinearPlot(rows, showNotes)
 	if err != nil {
 		log.Printf("Error creating linear plot: %v", err)
 		return

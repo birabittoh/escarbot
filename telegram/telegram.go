@@ -25,6 +25,7 @@ type EscarBot struct {
 	CaptchaMaxRetries int
 	WelcomeMessage    bool
 	StatsFeature      bool
+	StatsShowNotes    bool
 	ChannelID         int64
 	GroupID           int64
 	AdminID           int64
@@ -201,6 +202,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 	autoBan := getBoolEnv("AUTO_BAN", true)
 	captcha := getBoolEnv("CAPTCHA", true)
 	statsFeature := getBoolEnv("STATS_FEATURE", false)
+	statsShowNotes := getBoolEnv("STATS_SHOW_NOTES", true)
 
 	captchaTimeout := 120
 	if captchaTimeoutStr := os.Getenv("CAPTCHA_TIMEOUT"); captchaTimeoutStr != "" {
@@ -218,7 +220,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 
 	welcomeMessage := getBoolEnv("WELCOME_MESSAGE", true)
 
-	statsChatID := int64(0)
+	statsChatID := adminIdInt
 	if statsChatIDStr := os.Getenv("STATS_CHAT_ID"); statsChatIDStr != "" {
 		if val, err := strconv.ParseInt(statsChatIDStr, 10, 64); err == nil {
 			statsChatID = val
@@ -264,6 +266,7 @@ func NewBot(botToken string, channelId string, groupId string, adminId, logChann
 		CaptchaMaxRetries:     captchaMaxRetries,
 		WelcomeMessage:        welcomeMessage,
 		StatsFeature:          statsFeature,
+		StatsShowNotes:        statsShowNotes,
 		ChannelID:             channelIdInt,
 		GroupID:               groupIdInt,
 		AdminID:               adminIdInt,
