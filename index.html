@@ -742,6 +742,18 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="feature-item" id="feature-stats" onclick="showSettings('stats')">
+                    <div class="feature-info">
+                        <span class="feature-name">Stats</span>
+                    </div>
+                    <div class="feature-actions" onclick="event.stopPropagation()">
+                        <label class="switch">
+                            <input type="checkbox" id="statsToggle" onchange="toggleFeature('statsToggle', '/setStats')"{{ if .StatsFeature }} checked{{ end }}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <!-- Settings Column -->
@@ -858,6 +870,35 @@
                     <p style="color: #9ca3af;">Failure to solve the captcha (including exhausting retries) results in a ban, similar to auto-ban.</p>
                 </div>
 
+
+                <!-- Stats Settings -->
+                <div class="settings-panel" id="settings-stats">
+                    <div class="card-title">Stats settings</div>
+                    <form onsubmit="updateStatsConfig(event)">
+                        <div class="input-group">
+                            <label class="input-label" for="statsChatId">Target Chat ID</label>
+                            <input type="text" id="statsChatId" name="statsChatId" value="{{ .StatsChatID }}" placeholder="Enter chat ID" required>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="statsDegree">Polynomial Degree</label>
+                            <input type="text" id="statsDegree" name="statsDegree" value="{{ .StatsPolynomialDegree }}" placeholder="4" required>
+                        </div>
+                        <div class="input-group">
+                            <div class="replacer-item">
+                                <span style="font-size: 0.9rem;">Show notes in plots</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="statsShowNotes" name="showNotes" {{ if .StatsShowNotes }} checked{{ end }}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit">Save</button>
+                        </div>
+                    </form>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <p style="margin-bottom: 20px; color: #9ca3af;">Detects messages with a specific structure and generates growth plots.</p>
+                </div>
 
                 <!-- Welcome Message Settings -->
                 <div class="settings-panel" id="settings-welcome">
@@ -1017,6 +1058,30 @@
             }).catch(err => {
                 console.error('Error:', err);
                 checkbox.checked = !checkbox.checked;
+            });
+        }
+
+        // --- Stats Config ---
+        function updateStatsConfig(event) {
+            event.preventDefault();
+            const statsChatId = document.getElementById('statsChatId').value;
+            const statsDegree = document.getElementById('statsDegree').value;
+            const showNotes = document.getElementById('statsShowNotes').checked ? 'on' : 'off';
+            const params = new URLSearchParams();
+            params.append('statsChatId', statsChatId);
+            params.append('statsDegree', statsDegree);
+            params.append('showNotes', showNotes);
+
+            const btn = event.target.querySelector('button');
+            const originalText = btn.textContent;
+
+            fetch('/setStatsConfig', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            }).then(() => {
+                btn.textContent = 'Saved!';
+                setTimeout(() => btn.textContent = originalText, 2000);
             });
         }
 
