@@ -26,19 +26,16 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 )
 
-//go:embed DejaVuSans.ttf
-var dejavuSansData []byte
+//go:embed NotoColorEmoji.ttf
+var notoColorEmojiData []byte
 
-var emojiHandler text.Handler
+//go:embed DejaVuSans.ttf
+var dejaVuSansData []byte
 
 func init() {
-	// Start with default liberation fonts
 	coll := liberation.Collection()
 
-	// Parse embedded font
-	face, err := opentype.Parse(dejavuSansData)
-	if err == nil {
-		// Add it as default by putting it at the beginning
+	if face, err := opentype.Parse(dejaVuSansData); err == nil {
 		coll = append([]font.Face{{
 			Font: font.Font{Typeface: "DejaVuSans"},
 			Face: face,
@@ -47,8 +44,17 @@ func init() {
 		log.Printf("Warning: failed to parse embedded DejaVuSans font: %v", err)
 	}
 
+	if face, err := opentype.Parse(notoColorEmojiData); err == nil {
+		coll = append([]font.Face{{
+			Font: font.Font{Typeface: "NotoColorEmoji"},
+			Face: face,
+		}}, coll...)
+	} else {
+		log.Printf("Warning: failed to parse embedded NotoColorEmoji font: %v", err)
+	}
+
 	cache := font.NewCache(coll)
-	emojiHandler = text.Plain{Fonts: cache}
+	plot.DefaultTextHandler = text.Plain{Fonts: cache}
 }
 
 type StatsRow struct {
@@ -134,14 +140,6 @@ func createLinearPlot(rows []StatsRow, showNotes bool) ([]byte, error) {
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
 
-	if emojiHandler != nil {
-		p.Title.TextStyle.Handler = emojiHandler
-		p.X.Label.TextStyle.Handler = emojiHandler
-		p.Y.Label.TextStyle.Handler = emojiHandler
-		p.X.Tick.Label.Handler = emojiHandler
-		p.Y.Tick.Label.Handler = emojiHandler
-	}
-
 	pts := make(plotter.XYs, len(rows))
 	for i, row := range rows {
 		pts[i].X = float64(row.Date.Unix())
@@ -168,9 +166,7 @@ func createLinearPlot(rows []StatsRow, showNotes bool) ([]byte, error) {
 				if err == nil {
 					labels.Offset = vg.Point{X: 0, Y: -20}
 					labels.TextStyle[0].XAlign = draw.XCenter
-					if emojiHandler != nil {
-						labels.TextStyle[0].Handler = emojiHandler
-					}
+					labels.TextStyle[0].Handler = plot.DefaultTextHandler
 					p.Add(labels)
 				}
 			}
@@ -222,15 +218,6 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	p.X.Label.Text = "Giorni dall'inizio"
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
-
-	if emojiHandler != nil {
-		p.Title.TextStyle.Handler = emojiHandler
-		p.X.Label.TextStyle.Handler = emojiHandler
-		p.Y.Label.TextStyle.Handler = emojiHandler
-		p.X.Tick.Label.Handler = emojiHandler
-		p.Y.Tick.Label.Handler = emojiHandler
-		p.Legend.TextStyle.Handler = emojiHandler
-	}
 
 	// Real data
 	realLine, realPoints, _ := plotter.NewLinePoints(pts)
