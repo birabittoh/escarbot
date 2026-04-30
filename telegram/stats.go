@@ -192,11 +192,15 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	xValues := make([]float64, len(rows))
 	yValues := make([]float64, len(rows))
 	for i, row := range rows {
-		days := float64(row.Date.Sub(minDate) / (24 * time.Hour))
-		pts[i].X = days
+		days := float64(row.Date.Sub(minDate)) / float64(24*time.Hour)
+		pts[i].X = float64(row.Date.Unix())
 		pts[i].Y = row.Subscribers
 		xValues[i] = days
 		yValues[i] = row.Subscribers
+	}
+
+	daysToUnix := func(days float64) float64 {
+		return float64(minDate.Add(time.Duration(days * float64(24*time.Hour))).Unix())
 	}
 
 	// Polynomial fitting
@@ -215,9 +219,11 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 
 	p := plot.New()
 	p.Title.Text = "Crescita Iscritti: Dati Reali e Previsione"
-	p.X.Label.Text = "Giorni dall'inizio"
+	p.X.Label.Text = "Data"
 	p.Y.Label.Text = "Numero Iscritti"
 	p.Add(plotter.NewGrid())
+
+	p.X.Tick.Marker = plot.TimeTicks{Format: "2006-01-02"}
 
 	// Real data
 	realLine, realPoints, _ := plotter.NewLinePoints(pts)
@@ -229,9 +235,9 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	fittedPts := make(plotter.XYs, 100)
 	maxX := xValues[len(xValues)-1]
 	for i := 0; i < 100; i++ {
-		x := float64(i) * maxX / 99
-		fittedPts[i].X = x
-		fittedPts[i].Y = polyFunc(x)
+		days := float64(i) * maxX / 99
+		fittedPts[i].X = daysToUnix(days)
+		fittedPts[i].Y = polyFunc(days)
 	}
 	fittedLine, _ := plotter.NewLine(fittedPts)
 	fittedLine.Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
@@ -242,9 +248,9 @@ func createPredictionPlot(rows []StatsRow, degree int) ([]byte, error) {
 	// Prediction (next 365 days)
 	futurePts := make(plotter.XYs, 100)
 	for i := 0; i < 100; i++ {
-		x := maxX + float64(i)*365/99
-		futurePts[i].X = x
-		futurePts[i].Y = polyFunc(x)
+		days := maxX + float64(i)*365/99
+		futurePts[i].X = daysToUnix(days)
+		futurePts[i].Y = polyFunc(days)
 	}
 	futureLine, _ := plotter.NewLine(futurePts)
 	futureLine.Color = color.RGBA{R: 0, G: 255, B: 0, A: 255}
